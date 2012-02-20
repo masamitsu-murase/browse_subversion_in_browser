@@ -1,0 +1,14 @@
+{
+    "name": "Browse SVN in Google Chrome™",
+    "version": "0.0.1",
+
+    "description": "Extension to browse Subversion repository in Google Chrome™",
+
+    "browser_action": {
+        "default_title": "Browse SVN"
+    },
+
+    "background_page": "background.html",
+
+    "permissions": [ "tabs", "contextMenus", "http://*/" ]
+}
