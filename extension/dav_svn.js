@@ -172,7 +172,7 @@ var gDavSvn = (function(){
                 for (var i=0; i<tags.length; i++){
                     var log = tags[i];
                     logs.push({
-                        revision: log.getElementsByTagName("version-name")[0].firstChild.nodeValue,
+                        revision: parseInt(log.getElementsByTagName("version-name")[0].firstChild.nodeValue),
                         comment: log.getElementsByTagName("comment")[0].firstChild.nodeValue,
                         author: log.getElementsByTagName("creator-displayname")[0].firstChild.nodeValue,
                         date: log.getElementsByTagName("date")[0].firstChild.nodeValue
