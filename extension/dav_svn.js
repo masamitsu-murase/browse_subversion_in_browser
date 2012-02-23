@@ -186,6 +186,36 @@ var gDavSvn = (function(){
         });
     };
 
+    var davSvnGetResources = function(bc_url, callback){
+        var body = '<?xml version="1.0" encoding="utf-8"?>'
+            + '<propfind xmlns="DAV:"><prop><resourcetype xmlns="DAV:"/></prop></propfind>';
+        davSvnPropfind(bc_url, { "Depth": 1 }, body, function(res){
+            var array = [];
+            try{
+                var doc = res.responseXML;
+                var list = doc.getElementsByTagName("response");
+                for (var i=0; i<list.length; i++){
+                    var item = list[i];
+                    var href = item.getElementsByTagName("href")[0].firstChild.nodeValue;
+                    if (href == bc_url){
+                        continue;
+                    }
+
+                    var type = (item.getElementsByTagName("resourcetype")[0]
+                                .getElementsByTagName("collection").length == 1) ? "directory" : "file";
+                    array.push({
+                        name: href,
+                        type: type
+                    });
+                }
+            }catch(e){
+                callback(null);
+                return;
+            }
+            callback(array);
+        });
+    };
+
     var davSvnLog = function(url, start_rev, end_rev, limit, callback){
         var base_url = url.match(/^https?:\/\/[^\/?#]+/)[0];
         end_rev = (end_rev || 0);
@@ -242,7 +272,63 @@ var gDavSvn = (function(){
         });
     };
 
+    var davSvnFileList = function(url, rev, callback){
+        var base_url = url.match(/^https?:\/\/[^\/?#]+/)[0];
+
+        // nest nest nest nest...
+        davSvnCheckConnection(url, function(obj_options){
+            if (!obj_options){
+                callback({ ret: false });
+                return;
+            }
+
+            davSvnGetVcc(url, function(vcc){
+                if (!vcc){
+                    callback({ ret: false });
+                    return;
+                }
+
+                var vcc_url = base_url + vcc.vcc;
+                davSvnGetCheckInInfo(vcc_url, function(check_in){
+                    if (!check_in){
+                        callback({ ret: false });
+                        return;
+                    }
+
+                    var bln_url = base_url + check_in.bln;
+                    davSvnGetBc(bln_url, null, function(bc){
+                        if (!bc){
+                            callback({ ret: false });
+                            return;
+                        }
+
+                        if (rev == "HEAD" || rev === null){
+                            rev = bc.rev;
+                        }
+                        davSvnGetBc(bln_url, rev, function(bc){
+                            if (!bc){
+                                callback({ ret: false });
+                                return;
+                            }
+
+                            var bc_url = base_url + bc.bc + vcc.path;
+                            davSvnGetResources(bc_url, function(file_list){
+                                if (!file_list){
+                                    callback({ ret: false });
+                                    return;
+                                }
+
+                                callback({ ret: true, file_list: file_list });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    };
+
     return {
-        log: davSvnLog
+        log: davSvnLog,
+        fileList: davSvnFileList
     };
 })();
