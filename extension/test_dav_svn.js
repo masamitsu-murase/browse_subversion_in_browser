@@ -1,5 +1,5 @@
 
-(function(){
+var gTestDavSvn = (function(){
     var gResult = [];
     var gAsyncFlag = {};
     var WAIT_INTERVAL = 50;
@@ -81,8 +81,8 @@
             } ]));
         };
 
-        var testGetRevisionCheck = function(callbackGetRevisionCheck){
-            var key = "testGetRevisionCheck";
+        var testGetRevisionLogCheck = function(callbackGetRevisionLogCheck){
+            var key = "testGetRevisionLogCheck";
             var dir_url = "http://svn.apache.org/repos/asf/subversion/trunk";
             var correct_response = [
                 [ 999992, "philip", "2010-09-22T14:44:17.139330Z",
@@ -110,7 +110,7 @@
                 });
             }, function(){
                 gAsyncFlag[key] = true;
-                callbackGetRevisionCheck();
+                callbackGetRevisionLogCheck();
             } ]);
         };
 
@@ -120,7 +120,7 @@
                 gAsyncFlag[key] = true;
             });
         }, function(){
-            testGetRevisionCheck(function(){
+            testGetRevisionLogCheck(function(){
                 gAsyncFlag[key] = true;
             });
         }, function(){
@@ -131,7 +131,7 @@
 
     var testDavSvnFileList = function(callback){
         var dir_url = "http://svn.apache.org/repos/asf/subversion/trunk";
-        
+        var root_dir_url = "http://svn.apache.org/repos/asf/";
         var testGetFileList = function(callbackGetFileList){
             var key = "testGetFileList";
             asyncCall(key, [ function(){
@@ -139,6 +139,16 @@
                     try{
                         var file_list = obj.file_list;
                         assertEqual(23, file_list.length, "length check: " + file_list.length);
+                    }catch(e){
+                        assert(false, "error");
+                    }
+                    gAsyncFlag[key] = true;
+                });
+            }, function(){
+                gDavSvn.fileList(root_dir_url, 1, function(obj){
+                    try{
+                        var file_list = obj.file_list;
+                        assertEqual(2, file_list.length, "length check: " + file_list.length);
                     }catch(e){
                         assert(false, "error");
                     }
@@ -161,6 +171,37 @@
         } ]);
     };
 
+    var testDavSvnLatestRevision = function(callback){
+        var dir_url = "http://svn.apache.org/repos/asf/subversion/trunk";
+        var testGetLatestRevision = function(callbackGetLatestRevision){
+            var key = "testGetLatestRevision";
+            asyncCall(key, [ function(){
+                gDavSvn.latestRevision(dir_url, function(obj){
+                    try{
+                        assert(obj.ret, "ret check");
+                        alert("latest revision: " + obj.revision);
+                    }catch(e){
+                        assert(false, "error");
+                    }
+                    gAsyncFlag[key] = true;
+                });
+            }, function(){
+                callbackGetLatestRevision();
+                gAsyncFlag[key] = true;
+            } ]);
+        };
+
+        var key = "testDavSvnLatestRevision";
+        asyncCall(key, [ function(){
+            testGetLatestRevision(function(){
+                gAsyncFlag[key] = true;
+            });
+        }, function(){
+            callback();
+            gAsyncFlag[key] = true;
+        } ]);
+    };
+
     var testAll = function(){
         var key = "testAll";
         asyncCall(key, [ function(){
@@ -169,6 +210,10 @@
             });
         }, function(){
             testDavSvnFileList(function(){
+                gAsyncFlag[key] = true;
+            });
+        }, function(){
+            testDavSvnLatestRevision(function(){
                 gAsyncFlag[key] = true;
             });
         }, function(){
@@ -184,6 +229,7 @@
         alert(t || "OK");
     };
 
-    // Do!
-    testAll();
+    return {
+        testAll: testAll
+    };
 })();

@@ -1,5 +1,19 @@
 
 var gDavSvn = (function(){
+    var RET_FAIL = { ret: false };
+
+    var parseURL = function(url){
+        var match_data = url.match(/^https?:\/\/[^\/?#]+/);
+        if (!match_data){
+            return null;
+        }
+
+        return {
+            raw_url: url,
+            base_url: match_data[0]
+        };
+    };
+
     var doXmlHttpRequest = function(method, url, header, body, callback){
         var url = url.replace(/\/$/, "");
 
@@ -53,7 +67,7 @@ var gDavSvn = (function(){
                     return;
                 }
 
-                obj.rev = res.getResponseHeader("SVN-Youngest-Rev");
+                obj.youngest_revision = res.getResponseHeader("SVN-Youngest-Rev");
             }catch(e){
                 callback(null);
                 return;
@@ -77,7 +91,7 @@ var gDavSvn = (function(){
 
             try{
                 var doc = res.responseXML;
-                if (!(obj.vcc = doc.getElementsByTagName("version-controlled-configuration")[0]
+                if (!(obj.vcc_path = doc.getElementsByTagName("version-controlled-configuration")[0]
                       .getElementsByTagName("href")[0].firstChild.nodeValue)){
                     callback(null);
                     return;
@@ -121,7 +135,7 @@ var gDavSvn = (function(){
         });
     };
 
-    var davSvnGetBc = function(bln_url, revision, callback){
+    var davSvnGetBc = function(url, revision, callback){
         var body = '<?xml version="1.0" encoding="utf-8"?>'
             + '<propfind xmlns="DAV:"><prop>'
             + '<baseline-collection xmlns="DAV:"/><version-name xmlns="DAV:"/>'
@@ -130,7 +144,7 @@ var gDavSvn = (function(){
         if (revision !== null){
             param["Label"] = revision;
         }
-        davSvnPropfind(bln_url, param, body, function(res){
+        davSvnPropfind(url, param, body, function(res){
             var obj = {};
             try{
                 var doc = res.responseXML;
@@ -140,7 +154,7 @@ var gDavSvn = (function(){
                     return;
                 }
 
-                if (!(obj.rev = parseInt(doc.getElementsByTagName("version-name")[0]
+                if (!(obj.revision = parseInt(doc.getElementsByTagName("version-name")[0]
                                          .firstChild.nodeValue))){
                     callback(null);
                     return;
@@ -216,56 +230,110 @@ var gDavSvn = (function(){
         });
     };
 
-    var davSvnLog = function(url, start_rev, end_rev, limit, callback){
-        var base_url = url.match(/^https?:\/\/[^\/?#]+/)[0];
-        end_rev = (end_rev || 0);
-
-        // nest nest nest nest...
+    var davSvnOptionAndVcc = function(url, callback){
         davSvnCheckConnection(url, function(obj_options){
             if (!obj_options){
-                callback({ ret: false });
+                callback(null);
                 return;
             }
 
             davSvnGetVcc(url, function(vcc){
                 if (!vcc){
-                    callback({ ret: false });
+                    callback(null);
                     return;
                 }
 
-                var vcc_url = base_url + vcc.vcc;
-                davSvnGetCheckInInfo(vcc_url, function(check_in){
-                    if (!check_in){
-                        callback({ ret: false });
+                callback({ obj_options: obj_options, vcc: vcc });
+            });
+        });
+    };
+
+    ///////////////////////////////////////////////////
+    var davSvnLatestRevision = function(url, callback){
+        var parsed_url = parseURL(url);
+        if (!parsed_url){
+            callback(RET_FAIL);
+            return;
+        }
+
+        var base_url = parsed_url.base_url;
+        davSvnOptionAndVcc(url, function(obj){
+            if (!obj){
+                callback(RET_FAIL);
+                return;
+            }
+
+            var vcc_url = base_url + obj.vcc.vcc_path;
+            davSvnGetCheckInInfo(vcc_url, function(check_in){
+                if (!check_in){
+                    callback(RET_FAIL);
+                    return;
+                }
+
+                var bln_url = base_url + check_in.bln;
+                davSvnGetBc(bln_url, null, function(bc){
+                    if (!bc){
+                        callback(RET_FAIL);
                         return;
                     }
 
-                    var bln_url = base_url + check_in.bln;
-                    davSvnGetBc(bln_url, null, function(bc){
-                        if (!bc){
-                            callback({ ret: false });
+                    callback({ ret: true, revision: bc.revision });
+                });
+            });
+        });
+    };
+
+    var davSvnLog = function(url, start_rev, end_rev, limit, callback){
+        var parsed_url = parseURL(url);
+        if (!parsed_url){
+            callback(RET_FAIL);
+            return;
+        }
+
+        var base_url = parsed_url.base_url;
+        if (start_rev == "HEAD" || start_rev === null){
+            davSvnLatestRevision(url, function(obj){
+                if (!obj || !(obj.ret)){
+                    callback(RET_FAIL);
+                    return;
+                }
+
+                davSvnLog(url, obj.revision, end_rev, limit, callback);
+            });
+            return;
+        }
+
+        end_rev = (end_rev || 0);
+
+        // nest nest nest nest...
+        davSvnOptionAndVcc(url, function(obj){
+            if (!obj){
+                callback(RET_FAIL);
+                return;
+            }
+
+            var vcc_url = base_url + obj.vcc.vcc_path;
+            davSvnGetCheckInInfo(vcc_url, function(check_in){
+                if (!check_in){
+                    callback(RET_FAIL);
+                    return;
+                }
+
+                var bln_url = base_url + check_in.bln;
+                davSvnGetBc(bln_url, start_rev, function(bc){
+                    if (!bc){
+                        callback(RET_FAIL);
+                        return;
+                    }
+
+                    var bc_url = base_url + bc.bc + obj.vcc.path;
+                    davSvnGetLogs(bc_url, start_rev, end_rev, limit, function(logs){
+                        if (!logs){
+                            callback(RET_FAIL);
                             return;
                         }
 
-                        if (start_rev == "HEAD" || start_rev === null){
-                            start_rev = bc.rev;
-                        }
-                        davSvnGetBc(bln_url, start_rev, function(bc){
-                            if (!bc){
-                                callback({ ret: false });
-                                return;
-                            }
-
-                            var bc_url = base_url + bc.bc + vcc.path;
-                            davSvnGetLogs(bc_url, start_rev, end_rev, limit, function(logs){
-                                if (!logs){
-                                    callback({ ret: false });
-                                    return;
-                                }
-
-                                callback({ ret: true, logs: logs });
-                            });
-                        });
+                        callback({ ret: true, logs: logs });
                     });
                 });
             });
@@ -273,55 +341,46 @@ var gDavSvn = (function(){
     };
 
     var davSvnFileList = function(url, rev, callback){
-        var base_url = url.match(/^https?:\/\/[^\/?#]+/)[0];
+        var parsed_url = parseURL(url);
+        if (!parsed_url){
+            callback(RET_FAIL);
+            return;
+        }
+        var base_url = parsed_url.base_url;
 
-        // nest nest nest nest...
-        davSvnCheckConnection(url, function(obj_options){
-            if (!obj_options){
-                callback({ ret: false });
-                return;
-            }
-
-            davSvnGetVcc(url, function(vcc){
-                if (!vcc){
-                    callback({ ret: false });
+        if (rev == "HEAD" || rev === null){
+            davSvnLatestRevision(url, function(obj){
+                if (!obj || !(obj.ret)){
+                    callback(RET_FAIL);
                     return;
                 }
 
-                var vcc_url = base_url + vcc.vcc;
-                davSvnGetCheckInInfo(vcc_url, function(check_in){
-                    if (!check_in){
-                        callback({ ret: false });
+                davSvnFileList(url, obj.revision, callback);
+            });
+            return;
+        }
+
+        davSvnOptionAndVcc(url, function(obj){
+            if (!obj){
+                callback(RET_FAIL);
+                return;
+            }
+
+            var vcc_url = base_url + obj.vcc.vcc_path;
+            davSvnGetBc(vcc_url, rev, function(bc){
+                if (!bc){
+                    callback(RET_FAIL);
+                    return;
+                }
+
+                var bc_url = base_url + bc.bc + obj.vcc.path;
+                davSvnGetResources(bc_url, function(file_list){
+                    if (!file_list){
+                        callback(RET_FAIL);
                         return;
                     }
 
-                    var bln_url = base_url + check_in.bln;
-                    davSvnGetBc(bln_url, null, function(bc){
-                        if (!bc){
-                            callback({ ret: false });
-                            return;
-                        }
-
-                        if (rev == "HEAD" || rev === null){
-                            rev = bc.rev;
-                        }
-                        davSvnGetBc(bln_url, rev, function(bc){
-                            if (!bc){
-                                callback({ ret: false });
-                                return;
-                            }
-
-                            var bc_url = base_url + bc.bc + vcc.path;
-                            davSvnGetResources(bc_url, function(file_list){
-                                if (!file_list){
-                                    callback({ ret: false });
-                                    return;
-                                }
-
-                                callback({ ret: true, file_list: file_list });
-                            });
-                        });
-                    });
+                    callback({ ret: true, file_list: file_list });
                 });
             });
         });
@@ -329,6 +388,7 @@ var gDavSvn = (function(){
 
     return {
         log: davSvnLog,
-        fileList: davSvnFileList
+        fileList: davSvnFileList,
+        latestRevision: davSvnLatestRevision
     };
 })();
