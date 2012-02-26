@@ -340,6 +340,25 @@ var gDavSvn = (function(){
         });
     };
 
+    // Return root_url
+    var davSvnRootUrl = function(url, callback){
+        davSvnOptionAndVcc(url, function(obj){
+            if (!obj){
+                callback(RET_FAIL);
+                return;
+            }
+
+            var relative_path = obj.vcc.path;
+            var ret_obj = { ret: true, path: relative_path };
+            if (relative_path === ""){
+                ret_obj.root_url = url.replace(/\/$/, "") + "/";
+            }else{
+                ret_obj.root_url = url.substr(0, url.length - relative_path.length);
+            }
+            callback(ret_obj);
+        });
+    };
+
     var davSvnFileList = function(url, rev, callback){
         var parsed_url = parseURL(url);
         if (!parsed_url){
@@ -380,7 +399,7 @@ var gDavSvn = (function(){
                         return;
                     }
 
-                    callback({ ret: true, file_list: file_list });
+                    callback({ ret: true, file_list: file_list, revision: rev });
                 });
             });
         });
@@ -388,6 +407,7 @@ var gDavSvn = (function(){
 
     return {
         log: davSvnLog,
+        rootUrl: davSvnRootUrl,
         fileList: davSvnFileList,
         latestRevision: davSvnLatestRevision
     };

@@ -3,6 +3,7 @@ var gTestDavSvn = (function(){
     var gResult = [];
     var gAsyncFlag = {};
     var WAIT_INTERVAL = 50;
+    var gOutputElem = null;
 
     var asyncCall = function(key, funcs){
         var func = funcs[0];
@@ -26,18 +27,32 @@ var gTestDavSvn = (function(){
         }
     };
 
+    var output = function(message, erase){
+        if (gOutputElem){
+            if (erase){
+                gOutputElem.innerHTML = message;
+            }else{
+                gOutputElem.innerHTML += message + "<br />";
+            }
+        }
+    };
+
     var assert = function(value, message){
         if (value){
             gResult.push({ result: true, message: message });
+            output("Success: " + message);
         }else{
             gResult.push({ result: false, message: message });
+            output("*FAILURE*: " + message);
         }
     };
     var assertEqual = function(expected, value, message){
         if (expected === value){
             gResult.push({ result: true, message: message });
+            output("Success: " + message);
         }else{
             gResult.push({ result: false, message: message });
+            output("*FAILURE*: " + message);
         }
     };
 
@@ -202,7 +217,70 @@ var gTestDavSvn = (function(){
         } ]);
     };
 
-    var testAll = function(){
+    var testDavSvnRootUrl = function(callback){
+        var dir_url = "http://svn.apache.org/repos/asf/subversion/trunk";
+        var root_dir_url = "http://svn.apache.org/repos/asf/";
+        var root_url = "http://svn.apache.org/repos/asf";
+
+        var testGetRootUrl = function(callbackGetRootUrl){
+            var key = "testGetRootUrl";
+            asyncCall(key, [ function(){
+                gDavSvn.rootUrl(dir_url, function(obj){
+                    try{
+                        output("testGetRootUrl: " + dir_url);
+                        assert(obj.ret, "ret check");
+                        assertEqual(root_dir_url, obj.root_url, "root_url");
+                        assertEqual(dir_url.substr(root_dir_url.length), obj.path, "path");
+                    }catch(e){
+                        assert(false, "error");
+                    }
+                    gAsyncFlag[key] = true;
+                });
+            }, function(){
+                gDavSvn.rootUrl(root_url, function(obj){
+                    try{
+                        output("testGetRootUrl: " + root_url);
+                        assert(obj.ret, "ret check");
+                        assertEqual(root_dir_url, obj.root_url, "root_url: " + obj.root_url);
+                        assertEqual("", obj.path, "path: " + obj.path);
+                    }catch(e){
+                        assert(false, "error");
+                    }
+                    gAsyncFlag[key] = true;
+                });
+            }, function(){
+                gDavSvn.rootUrl(root_dir_url, function(obj){
+                    try{
+                        output("testGetRootUrl: " + root_dir_url);
+                        assert(obj.ret, "ret check");
+                        assertEqual(root_dir_url, obj.root_url, "root_url: " + obj.root_url);
+                        assertEqual("", obj.path, "path: " + obj.path);
+                    }catch(e){
+                        assert(false, "error");
+                    }
+                    gAsyncFlag[key] = true;
+                });
+            }, function(){
+                callbackGetRootUrl();
+                gAsyncFlag[key] = true;
+            } ]);
+        };
+
+
+        var key = "testDavSvnRootUrl";
+        asyncCall(key, [ function(){
+            testGetRootUrl(function(){
+                gAsyncFlag[key] = true;
+            });
+        }, function(){
+            callback();
+            gAsyncFlag[key] = true;
+        } ]);
+    };
+
+    var testAll = function(output_elem){
+        gOutputElem = output_elem;
+
         var key = "testAll";
         asyncCall(key, [ function(){
             testDavSvnLog(function(){
@@ -214,6 +292,10 @@ var gTestDavSvn = (function(){
             });
         }, function(){
             testDavSvnLatestRevision(function(){
+                gAsyncFlag[key] = true;
+            });
+        }, function(){
+            testDavSvnRootUrl(function(){
                 gAsyncFlag[key] = true;
             });
         }, function(){
