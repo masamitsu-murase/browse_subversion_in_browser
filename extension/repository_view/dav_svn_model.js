@@ -1,27 +1,62 @@
 
-var DavSvnResource = function(type, root_url, path, revision, last_modified_revision, state){
+var DavSvnResource = function(name, type, info){
     this.m_type = type;
-    this.m_root_url = root_url;
-    this.m_path = path;
-    this.m_revision = revision;
-    this.m_last_modified_revision = last_modified_revision;
-    this.m_state = state;
-    this.m_children = [];
+    if (type == DavSvnResource.TYPE_DIRECTORY){
+        this.m_dir_state = DavSvnResource.DIR_CLOSED;
+    }
+    this.m_name = name;
+    this.m_state = DavSvnResource.STATE_NOT_LOADED;
+    this.m_children = {};
+    this.m_info = (info || {});
 };
 DavSvnResource.prototype = {
     type: function(){ return this.m_type; },
-    root_url: function(){ return this.m_root_url; },
-    path: function(){ return this.m_path; },
-    url: function(){ return this.m_root_url + this.m_path; },
-    revision: function(){ return this.m_revision; },
-    lastModifiedRevision: function(){ return this.m_last_modified_revision; },
+    name: function(){ return this.m_name; },
     state: function(){ return this.m_state; },
     setState: function(state){ this.m_state = state; },
-    addChild: function(child){ this.m_children.push(child); },
-    children: function(){ return this.m_children; }
+
+    dirOpened: function(){
+        if (this.m_type != DavSvnResource.TYPE_DIRECTORY){
+            throw "dirOpened error";
+        }
+        return this.m_dir_state == DavSvnResource.DIR_OPENED;
+    },
+    setDirState: function(state){
+        if (this.m_type != DavSvnResource.TYPE_DIRECTORY){
+            throw "setDirState error";
+        }
+        this.m_dir_state = state;
+    },
+
+    addChild: function(child){
+        var name = child.name();
+        this.m_children[name] = child;
+    },
+    children: function(){ return this.m_children; },
+    hasChild: function(name){
+        return this.m_children[name] != null;
+    },
+    findChild: function(name){
+        return this.m_children[name];
+    },
+
+    debugInfo: function(level){
+        level = (level || 0);
+        var space = "";
+        for (var i=0; i<level; i++){
+            space += " ";
+        }
+        var str = space + this.name() + ": " + (this.type()==DavSvnResource.TYPE_FILE ? "file" : "dir");
+        for (var k in this.m_children){
+            str = str + "\n" + this.m_children[k].debugInfo(level + 1);
+        }
+        return str;
+    }
 };
-DavSvnResource.TYPE_DIRECTORY = 1;
-DavSvnResource.TYPE_FILE = 2;
+DavSvnResource.TYPE_FILE = 1;
+DavSvnResource.TYPE_DIRECTORY = 2;
+DavSvnResource.DIR_OPENED = 1;
+DavSvnResource.DIR_CLOSED = 2;
 DavSvnResource.STATE_LOADING = 1;
 DavSvnResource.STATE_LOADED = 2;
 DavSvnResource.STATE_NOT_LOADED = 3;
@@ -33,6 +68,7 @@ var DavSvnModel = function(url, revision){
     this.m_root_url = null;
     this.m_current_path = null;
     this.m_listeners = [];
+    this.m_root_dir = null;
 
     // initialize
     var self = this;
@@ -43,8 +79,6 @@ var DavSvnModel = function(url, revision){
 
         self.m_root_url = obj.root_url;
         self.m_current_path = obj.path;
-        self.notify();
-
         self.reloadPath(obj.path);
     });
 };
@@ -64,11 +98,46 @@ DavSvnModel.prototype = {
         };
     },
     reloadPath: function(path){
+        var self = this;
+        gDavSvn.fileList(this.m_root_url + path, this.m_operation_revision, function(obj){
+            if (!(obj.ret)){
+                return;
+            }
+
+            // add files
+            var target = obj.file_list.shift();
+            var target_resource = new DavSvnResource(target.path.split("/").pop(),
+                                                     (target.type == "file" ? DavSvnResource.TYPE_DIRECTORY
+                                                      : DavSvnResource.TYPE_FILE));
+            obj.file_list.forEach(function(file){
+                target_resource.addChild(new DavSvnResource(file.path.split("/").pop(),
+                                                            (file.type == "file" ? DavSvnResource.TYPE_FILE
+                                                             : DavSvnResource.TYPE_DIRECTORY)));
+            });
+            self.setResource(target_resource, target.path);
+            self.notify();
+        });
     },
     changePath: function(path){
     },
+
+    setResource: function(resource, path){
+        var dir = this.m_root_dir = (this.m_root_dir || new DavSvnResource("", DavSvnResource.TYPE_DIRECTORY));
+        var paths = path.split("/");
+        paths.pop();
+        paths.forEach(function(name){
+            if (dir.hasChild(name)){
+                dir = dir.findChild(name);
+            }else{
+                var new_dir = new DavSvnResource(name, DavSvnResource.TYPE_DIRECTORY);
+                dir.addChild(new_dir);
+                dir = new_dir;
+            }
+        });
+        dir.addChild(resource);
+    },
     directoryTree: function(){
-        
+       
     }
 };
 

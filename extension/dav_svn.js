@@ -218,7 +218,7 @@ var gDavSvn = (function(){
                     var type = (item.getElementsByTagName("resourcetype")[0]
                                 .getElementsByTagName("collection").length == 1) ? "directory" : "file";
                     array.push({
-                        name: href,
+                        href: href,
                         type: type
                     });
                 }
@@ -399,7 +399,17 @@ var gDavSvn = (function(){
                         return;
                     }
 
-                    callback({ ret: true, file_list: file_list, revision: rev });
+                    var ret_obj = {
+                        ret: true,
+                        file_list: file_list.map(function(item){
+                            return {
+                                path: item.href.substr(bc.bc.length).replace(/\/$/, ""),
+                                type: item.type
+                            };
+                        }),
+                        revision: rev
+                    };
+                    callback(ret_obj);
                 });
             });
         });

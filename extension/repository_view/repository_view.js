@@ -6,7 +6,7 @@
     };
     DirectoryView.prototype = {
         update: function(){
-            this.m_view_elem.innerHTML = this.m_model.repositoryInfo().root_url;
+            this.m_view_elem.innerHTML = this.m_model.m_root_dir.debugInfo();
         }
     };
 
@@ -19,9 +19,15 @@
         }, false);
 
         // view, model
-        elem = document.getElementById("tree");
-        var model = new DavSvnModel("http://svn.apache.org/repos/asf/subversion");
+        elem = document.getElementById("output");
+        var model = new DavSvnModel("http://svn.apache.org/repos/asf/subversion", 1000000);
         model.addListener(new DirectoryView(elem, model));
+
+        /// test
+        document.getElementById("show_files").addEventListener("click", function(){
+            var path = document.getElementById("path").value;
+            model.reloadPath(path);
+        }, false);
     };
 
     window.addEventListener("load", load, false);
