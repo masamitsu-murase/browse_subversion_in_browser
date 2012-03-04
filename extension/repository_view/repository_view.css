@@ -1,0 +1,24 @@
+
+
+dt.svn_resource_title > span{
+    padding-left: 1em;
+    background-size: 1em;
+    background-position: left center;
+    background-repeat: no-repeat;
+}
+dt.svn_resource_title > span.type_directory{
+    cursor: pointer;
+    background-image: url("./images/icon_folder.png");
+}
+dt.svn_resource_title > span.type_file{
+    background-image: url("./images/icon_file.png");
+}
+
+dt.svn_resource_title > span.not_loaded{
+    font-style: italic;
+}
+dt.svn_resource_title > span.loading{
+    font-weight: bold;
+    background-image: url("./images/ajax_loader.gif");
+}
+

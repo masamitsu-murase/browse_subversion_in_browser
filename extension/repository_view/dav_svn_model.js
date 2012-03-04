@@ -3,9 +3,11 @@ var DavSvnResource = function(name, type, info){
     this.m_type = type;
     if (type == DavSvnResource.TYPE_DIRECTORY){
         this.m_dir_state = DavSvnResource.DIR_CLOSED;
+        this.m_state = DavSvnResource.STATE_NOT_LOADED;
+    }else{
+        this.m_state = DavSvnResource.STATE_LOADED;
     }
     this.m_name = name;
-    this.m_state = DavSvnResource.STATE_NOT_LOADED;
     this.m_children = {};
     this.m_parent = null;
     this.m_info = (info || {});
@@ -79,6 +81,18 @@ DavSvnResource.prototype = {
         return path;
     },
 
+    markNotLoaded: function(){
+        this.m_children = {};
+        this.m_state = DavSvnResource.STATE_NOT_LOADED;
+    },
+    markLoading: function(){
+        this.m_children = {};
+        this.m_state = DavSvnResource.STATE_LOADING;
+    },
+    markLoaded: function(){
+        this.m_state = DavSvnResource.STATE_LOADED;
+    },
+
     debugInfo: function(level){
         level = (level || 0);
         var space = "";
@@ -95,8 +109,9 @@ DavSvnResource.prototype = {
         return str;
     }
 };
-DavSvnResource.TYPE_FILE = 1;
-DavSvnResource.TYPE_DIRECTORY = 2;
+DavSvnResource.TYPE_UNKNOWN = 1;
+DavSvnResource.TYPE_FILE = 2;
+DavSvnResource.TYPE_DIRECTORY = 3;
 DavSvnResource.DIR_OPENED = 1;
 DavSvnResource.DIR_CLOSED = 2;
 DavSvnResource.STATE_LOADING = 1;
@@ -142,22 +157,37 @@ DavSvnModel.prototype = {
     },
     reloadPath: function(path){
         var self = this;
+
+        // First, remove current resource.
+        var target = this.resource(path);
+        if (!target){
+            target = new DavSvnResource(path.split("/").pop(), DavSvnResource.TYPE_UNKNOWN);
+            this.setResource(target, path);
+        }
+        target.markLoading();
+        this.notify();
+
+        // Then, reload current resource and children.
         gDavSvn.fileList(this.m_root_url + path, this.m_operation_revision, function(obj){
             if (!(obj.ret)){
+                target.markNotLoaded();
+                self.notify();
                 return;
             }
 
             // add files
-            var target = obj.file_list.shift();
-            var target_resource = new DavSvnResource(target.path.split("/").pop(),
-                                                     (target.type == "file" ? DavSvnResource.TYPE_FILE
+            var target_info = obj.file_list.shift();
+            var target_resource = new DavSvnResource(target_info.path.split("/").pop(),
+                                                     (target_info.type == "file" ? DavSvnResource.TYPE_FILE
                                                       : DavSvnResource.TYPE_DIRECTORY));
             obj.file_list.forEach(function(file){
-                target_resource.addChild(new DavSvnResource(file.path.split("/").pop(),
-                                                            (file.type == "file" ? DavSvnResource.TYPE_FILE
-                                                             : DavSvnResource.TYPE_DIRECTORY)));
+                var child = new DavSvnResource(file.path.split("/").pop(),
+                                               (file.type == "file" ? DavSvnResource.TYPE_FILE
+                                                : DavSvnResource.TYPE_DIRECTORY));
+                target_resource.addChild(child);
             });
-            self.setResource(target_resource, target.path);
+            target_resource.markLoaded();
+            self.setResource(target_resource, target_info.path);
             self.notify();
         });
     },
@@ -165,11 +195,14 @@ DavSvnModel.prototype = {
     },
 
     setResource: function(resource, path){
-        var dir = this.m_root_dir = (this.m_root_dir || new DavSvnResource("", DavSvnResource.TYPE_DIRECTORY));
         if (path === ""){
+            this.m_root_dir = resource;
             return;
         }
 
+        this.m_root_dir = (this.m_root_dir || new DavSvnResource("", DavSvnResource.TYPE_DIRECTORY));
+
+        var dir = this.m_root_dir;
         var paths = path.split("/");
         paths.pop();
         paths.forEach(function(name){
@@ -184,6 +217,11 @@ DavSvnModel.prototype = {
         dir.addChild(resource);
     },
     resource: function(path){
+        if (!this.m_root_dir){
+            // Not initialized yet.
+            return null;
+        }
+
         if (path === "" || !path){
             // this means root.
             return this.m_root_dir;
@@ -194,12 +232,19 @@ DavSvnModel.prototype = {
         for (var i=0; i<paths.length; i++){
             var name = paths[i];
             if (dir.hasChild(name)){
-                dir = dir.findResource(name);
+                dir = dir.findChild(name);
             }else{
                 return null;
             }
         }
         return dir;
+    },
+
+    setRevision: function(revision){
+        this.m_root_dir = null;
+        this.m_peg_revision = revision;
+        this.m_operation_revision = revision;
+        this.reloadPath("");
     },
 
     directoryTree: function(){
