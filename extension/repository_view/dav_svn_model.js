@@ -168,7 +168,7 @@ DavSvnModel.prototype = {
         this.notify();
 
         // Then, reload current resource and children.
-        gDavSvn.fileList(this.m_root_url + path, this.m_operation_revision, function(obj){
+        gDavSvn.fileList(this.m_root_url + path, this.m_peg_revision, function(obj){
             if (!(obj.ret)){
                 target.markNotLoaded();
                 self.notify();

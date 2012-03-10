@@ -119,6 +119,40 @@ var gDavSvn = (function(){
         });
     };
 
+    var davSvnGetVccWithRetry = function(url, callback){
+        davSvnGetVcc(url, function(vcc_obj){
+            if (!vcc_obj){
+                callback(null);
+                return;
+            }
+
+            if (!vcc_obj.ret){
+                switch(vcc_obj.status){
+                case HTTP_STATUS_NOT_FOUND:
+                    // retry with parent directory
+                    var parent = url.substr(0, url.lastIndexOf("/"));
+                    var current_resource_name = url.substr(url.lastIndexOf("/") + 1);
+                    davSvnGetVccWithRetry(parent, function(obj){
+                        if (!obj){
+                            callback(null);
+                            return;
+                        }
+
+                        obj.vcc.path += "/" + current_resource_name;
+                        callback(obj);
+                        return;
+                    });
+                    return;
+                default:
+                    callback(null);
+                    return;
+                }
+            }
+
+            callback(vcc_obj);
+        });
+    };
+
     var davSvnGetCheckInInfo = function(vcc_url, callback){
         var body = '<?xml version="1.0" encoding="utf-8"?>'
             + '<propfind xmlns="DAV:"><prop><checked-in xmlns="DAV:"/></prop></propfind>';
@@ -244,31 +278,10 @@ var gDavSvn = (function(){
                 return;
             }
 
-            davSvnGetVcc(url, function(vcc_obj){
+            davSvnGetVccWithRetry(url, function(vcc_obj){
                 if (!vcc_obj){
                     callback(null);
                     return;
-                }else if (!vcc_obj.ret){
-                    switch(vcc_obj.status){
-                    case HTTP_STATUS_NOT_FOUND:
-                        // retry with parent directory
-                        var parent = url.substr(0, url.lastIndexOf("/"));
-                        var current_resource_name = url.substr(url.lastIndexOf("/") + 1);
-                        davSvnOptionAndVcc(parent, function(obj){
-                            if (!obj){
-                                callback(null);
-                                return;
-                            }
-
-                            obj.vcc.path += "/" + current_resource_name;
-                            callback(obj);
-                            return;
-                        });
-                        return;
-                    default:
-                        callback(null);
-                        return;
-                    }
                 }
 
                 callback({ obj_options: obj_options, vcc: vcc_obj.vcc });
