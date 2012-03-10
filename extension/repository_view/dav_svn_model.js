@@ -149,6 +149,9 @@ DavSvnModel.prototype = {
         });
     },
 
+    pegRevision: function(){ return this.m_peg_revision; },
+    operationRevision: function(){ return this.m_operation_revision; },
+
     repositoryInfo: function(){
         return {
             uuid: "not implemented yet",
@@ -245,10 +248,6 @@ DavSvnModel.prototype = {
         this.m_peg_revision = revision;
         this.m_operation_revision = revision;
         this.reloadPath("");
-    },
-
-    directoryTree: function(){
-       
     }
 };
 

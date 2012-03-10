@@ -5,6 +5,8 @@
         this.m_root_div = this.createRootDiv();
         this.m_view_elem.appendChild(this.m_root_div);
         this.m_model = model;
+
+        this.m_log_view = null;
     };
     DirectoryView.prototype = {
         update: function(){
@@ -23,6 +25,10 @@
             // append new child
             var dir = this.m_model.resource("");
             root_div.appendChild(this.createResourceNode(dir));
+        },
+
+        setLogView: function(log_view){
+            this.m_log_view = log_view;
         },
 
         createRootDiv: function(){
@@ -65,6 +71,10 @@
                 var path = rsc.path();
                 var self = this;
                 title.addEventListener("click", function(){
+                    if (self.m_log_view){
+                        self.m_log_view.updateLog(path);
+                    }
+
                     self.m_model.reloadPath(path);
                 });
             }
@@ -95,6 +105,57 @@
     DirectoryView.CLASS_TYPE_FILE = "type_file";
 
 
+    var LogView = function(elem, model){
+        this.m_view_elem = elem;
+        this.m_model = model;
+    };
+    LogView.prototype = {
+        updateLog: function(path){
+            var url = this.m_model.repositoryInfo().root_url + path;
+            var self = this;
+            gDavSvn.log(url, this.m_model.pegRevision(), 0, 100, function(obj){
+                if (!obj.ret){
+                    return;
+                }
+
+                self.updateLogHelper(url, obj.logs);
+            });
+        },
+
+        updateLogHelper: function(url, logs){
+            var children = this.m_view_elem.childNodes;
+            for (var i=0; i<children.length; i++){
+                this.m_view_elem.removeChild(children[i]);
+            }
+
+            var elem = document.createElement("dl");
+            this.m_view_elem.appendChild(elem);
+            elem.className = LogView.CLASS_LOG_VIEW;
+
+            var title = document.createElement("dt");
+            elem.appendChild(title);
+            title.appendChild(document.createTextNode(url));
+
+            var dd = document.createElement("dd");
+            elem.appendChild(dd);
+            var logs_root = document.createElement("dl");
+            dd.appendChild(logs_root);
+            logs.forEach(function(log){
+                var dt = document.createElement("dt");
+                logs_root.appendChild(dt);
+                dt.appendChild(document.createTextNode(log.revision + ": " + log.author + ": " + log.date));
+
+                var dd = document.createElement("dd");
+                logs_root.appendChild(dd);
+                var div = document.createElement("div");
+                dd.appendChild(div);
+                div.appendChild(document.createTextNode(log.comment));
+            });
+        }
+    };
+    LogView.CLASS_LOG_VIEW = "log_view";
+
+
     var load = function(){
         // for test
         var elem = document.getElementById("test");
@@ -103,9 +164,13 @@
         }, false);
 
         // view, model
-        elem = document.getElementById("output");
         var model = new DavSvnModel("http://svn.apache.org/repos/asf/subversion", 1000000);
-        model.addListener(new DirectoryView(elem, model));
+        elem = document.getElementById("output");
+        var dv = new DirectoryView(elem, model);
+        model.addListener(dv);
+
+        var log_elem = document.getElementById("log");
+        dv.setLogView(new LogView(log_elem, model));
 
         /// test
         document.getElementById("change_revision").addEventListener("click", function(){

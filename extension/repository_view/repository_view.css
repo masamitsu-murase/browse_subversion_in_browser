@@ -1,5 +1,7 @@
 
-
+/* DirectoryView */
+div.svn_root{
+}
 dt.svn_resource_title > span{
     padding-left: 1em;
     background-size: 1em;
@@ -22,3 +24,28 @@ dt.svn_resource_title > span.loading{
     background-image: url("./images/ajax_loader.gif");
 }
 
+dd.svn_children_root{
+    margin-left: 0px;
+}
+
+dd.svn_children_root > ul{
+    list-style: none;
+}
+
+/* LogView */
+dl.log_view{
+    float: right;
+    width: 20em;
+}
+dl.log_view > dt{
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+dl.log_view > dd > dl > dt{
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+dl.log_view > dd > dl > dd > div{
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
