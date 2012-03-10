@@ -2,6 +2,8 @@
 var gDavSvn = (function(){
     var RET_FAIL = { ret: false };
 
+    var HTTP_STATUS_NOT_FOUND = 404;
+
     var parseURL = function(url){
         var match_data = url.match(/^https?:\/\/[^\/?#]+/);
         if (!match_data){
@@ -61,11 +63,11 @@ var gDavSvn = (function(){
         davSvnOptions(url, {}, body, function(res){
             var obj = {};
             try{
-                var allowed_actions = (res.getResponseHeader("Allow") || "").split(/\s*,/);
-                if (allowed_actions.indexOf("PROPFIND") < 0){
-                    callback(null);
-                    return;
-                }
+                // var allowed_actions = (res.getResponseHeader("Allow") || "").split(/\s*,/);
+                // if (allowed_actions.indexOf("PROPFIND") < 0){
+                //     callback(null);
+                //     return;
+                // }
 
                 obj.youngest_revision = res.getResponseHeader("SVN-Youngest-Rev");
             }catch(e){
@@ -90,6 +92,11 @@ var gDavSvn = (function(){
             var obj = {};
 
             try{
+                if (res.status == HTTP_STATUS_NOT_FOUND){
+                    callback({ ret: false, status: HTTP_STATUS_NOT_FOUND });
+                    return;
+                }
+
                 var doc = res.responseXML;
                 if (!(obj.vcc_path = doc.getElementsByTagName("version-controlled-configuration")[0]
                       .getElementsByTagName("href")[0].firstChild.nodeValue)){
@@ -108,7 +115,7 @@ var gDavSvn = (function(){
                 return;
             }
 
-            callback(obj);
+            callback({ ret: true, vcc: obj });
         });
     };
 
@@ -237,13 +244,34 @@ var gDavSvn = (function(){
                 return;
             }
 
-            davSvnGetVcc(url, function(vcc){
-                if (!vcc){
+            davSvnGetVcc(url, function(vcc_obj){
+                if (!vcc_obj){
                     callback(null);
                     return;
+                }else if (!vcc_obj.ret){
+                    switch(vcc_obj.status){
+                    case HTTP_STATUS_NOT_FOUND:
+                        // retry with parent directory
+                        var parent = url.substr(0, url.lastIndexOf("/"));
+                        var current_resource_name = url.substr(url.lastIndexOf("/") + 1);
+                        davSvnOptionAndVcc(parent, function(obj){
+                            if (!obj){
+                                callback(null);
+                                return;
+                            }
+
+                            obj.vcc.path += "/" + current_resource_name;
+                            callback(obj);
+                            return;
+                        });
+                        return;
+                    default:
+                        callback(null);
+                        return;
+                    }
                 }
 
-                callback({ obj_options: obj_options, vcc: vcc });
+                callback({ obj_options: obj_options, vcc: vcc_obj.vcc });
             });
         });
     };
