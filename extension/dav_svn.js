@@ -346,7 +346,6 @@ var gDavSvn = (function(){
 
         end_rev = (end_rev || 0);
 
-        // nest nest nest nest...
         davSvnOptionAndVcc(url, function(obj){
             if (!obj){
                 callback(RET_FAIL);
@@ -354,28 +353,20 @@ var gDavSvn = (function(){
             }
 
             var vcc_url = base_url + obj.vcc.vcc_path;
-            davSvnGetCheckInInfo(vcc_url, function(check_in){
-                if (!check_in){
+            davSvnGetBc(vcc_url, start_rev, function(bc){
+                if (!bc){
                     callback(RET_FAIL);
                     return;
                 }
 
-                var bln_url = base_url + check_in.bln;
-                davSvnGetBc(bln_url, start_rev, function(bc){
-                    if (!bc){
+                var bc_url = base_url + bc.bc + obj.vcc.path;
+                davSvnGetLogs(bc_url, start_rev, end_rev, limit, function(logs){
+                    if (!logs){
                         callback(RET_FAIL);
                         return;
                     }
 
-                    var bc_url = base_url + bc.bc + obj.vcc.path;
-                    davSvnGetLogs(bc_url, start_rev, end_rev, limit, function(logs){
-                        if (!logs){
-                            callback(RET_FAIL);
-                            return;
-                        }
-
-                        callback({ ret: true, logs: logs });
-                    });
+                    callback({ ret: true, logs: logs });
                 });
             });
         });
