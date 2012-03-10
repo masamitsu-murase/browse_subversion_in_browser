@@ -37,15 +37,9 @@
             return elem;
         },
 
-        createResourceNode: function(rsc){
-            var elem = document.createElement("dl");
-
-            // Information of this element
-            var resource_title = document.createElement("dt");
-            resource_title.className = DirectoryView.CLASS_RESOURCE_TITLE;
-            elem.appendChild(resource_title);
-
+        createResourceNodeTitle: function(rsc){
             var title = document.createElement("span");
+
             if (rsc.isRoot()){
                 title.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
             }else{
@@ -64,7 +58,6 @@
                 break;
             }
             title.className = class_name;
-            resource_title.appendChild(title);
 
             // event for title
             if (rsc.isDirectory()){
@@ -75,9 +68,24 @@
                         self.m_log_view.updateLog(path);
                     }
 
+                    self.m_model.changePath(path);
                     self.m_model.reloadPath(path);
                 });
             }
+
+            return title;
+        },
+
+        createResourceNode: function(rsc){
+            var elem = document.createElement("dl");
+
+            // Information of this element
+            var resource_title = document.createElement("dt");
+            resource_title.className = DirectoryView.CLASS_RESOURCE_TITLE;
+            elem.appendChild(resource_title);
+
+            var title = this.createResourceNodeTitle(rsc);
+            resource_title.appendChild(title);
 
             if (rsc.isDirectory()){
                 // Information of children

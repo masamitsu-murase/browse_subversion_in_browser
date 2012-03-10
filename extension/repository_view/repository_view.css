@@ -41,6 +41,12 @@ dl.log_view > dt{
     word-wrap: break-word;
     white-space: pre-wrap;
 }
+dl.log_view > dd > dl > dt:nth-child(4n + 1), dl.log_view > dd > dl > dd:nth-child(4n + 2){
+    background-color: #EEE;
+}
+dl.log_view > dd > dl > dt:nth-child(4n + 3), dl.log_view > dd > dl > dd:nth-child(4n + 4){
+    background-color: #FFF;
+}
 dl.log_view > dd > dl > dt{
     word-wrap: break-word;
     white-space: pre-wrap;
