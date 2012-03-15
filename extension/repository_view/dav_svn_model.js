@@ -18,17 +18,31 @@ DavSvnResource.prototype = {
     state: function(){ return this.m_state; },
     setState: function(state){ this.m_state = state; },
 
-    dirOpened: function(){
+    dirIsOpened: function(){
         if (this.m_type != DavSvnResource.TYPE_DIRECTORY){
-            throw "dirOpened error";
+            throw "dirIsOpened error";
         }
         return this.m_dir_state == DavSvnResource.DIR_OPENED;
+    },
+    dirIsClosed: function(){
+        if (this.m_type != DavSvnResource.TYPE_DIRECTORY){
+            throw "dirIsClosed error";
+        }
+        return this.m_dir_state == DavSvnResource.DIR_CLOSED;
     },
     setDirState: function(state){
         if (this.m_type != DavSvnResource.TYPE_DIRECTORY){
             throw "setDirState error";
         }
+        var changed = (this.m_dir_state != state);
         this.m_dir_state = state;
+        return changed;
+    },
+    dirOpen: function(){
+        return this.setDirState(DavSvnResource.DIR_OPENED);
+    },
+    dirClose: function(){
+        return this.setDirState(DavSvnResource.DIR_CLOSED);
     },
 
     isRoot: function(){
@@ -197,6 +211,40 @@ DavSvnModel.prototype = {
     changePath: function(path){
     },
 
+    // Directory operation
+    openDirectory: function(path, no_notify){
+        if (!resource || !resource.isDirectory()){
+            return;
+        }
+        var changed = resource.dirClose();
+        if (changed && no_notify){
+            this.notify();
+        }
+    },
+    closeDirectory: function(path, no_notify){
+        var resource = this.resource(path);
+        if (!resource || !resource.isDirectory()){
+            return;
+        }
+        var changed = resource.dirOpen();
+        if (changed && no_notify){
+            this.notify();
+        }
+    },
+    toggleDirectory: function(path, no_notify){
+        var resource = this.resource(path);
+        if (!resource || !resource.isDirectory()){
+            return;
+        }
+
+        if (resource.dirIsOpened()){
+            this.closeDirectory(path, no_notify);
+        }else{
+            this.openDirectory(path, no_notify);
+        }
+    },
+
+    // Resource
     setResource: function(resource, path){
         if (path === ""){
             this.m_root_dir = resource;
