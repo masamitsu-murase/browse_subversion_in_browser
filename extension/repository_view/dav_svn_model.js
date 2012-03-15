@@ -1,12 +1,14 @@
 
 var DavSvnResource = function(name, type, info){
     this.m_type = type;
-    if (type == DavSvnResource.TYPE_DIRECTORY){
+    switch(type){
+      case DavSvnResource.TYPE_DIRECTORY:
         this.m_dir_state = DavSvnResource.DIR_CLOSED;
-        this.m_state = DavSvnResource.STATE_NOT_LOADED;
-    }else{
-        this.m_state = DavSvnResource.STATE_LOADED;
+        break;
+      default:
+        break;
     }
+    this.m_state = DavSvnResource.STATE_NOT_LOADED;
     this.m_name = name;
     this.m_children = {};
     this.m_parent = null;
@@ -175,7 +177,7 @@ DavSvnModel.prototype = {
     reloadPath: function(path){
         var self = this;
 
-        // First, remove current resource.
+        // First, replace current resource.
         var target = this.resource(path);
         if (!target){
             target = new DavSvnResource(path.split("/").pop(), DavSvnResource.TYPE_UNKNOWN);
