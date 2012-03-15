@@ -179,7 +179,7 @@ DavSvnModel.prototype = {
         var target = this.resource(path);
         if (!target){
             target = new DavSvnResource(path.split("/").pop(), DavSvnResource.TYPE_UNKNOWN);
-            this.setResource(target, path);
+            this.setResource(path, target);
         }
         target.markLoading();
         this.notify();
@@ -204,7 +204,7 @@ DavSvnModel.prototype = {
                 target_resource.addChild(child);
             });
             target_resource.markLoaded();
-            self.setResource(target_resource, target_info.path);
+            self.setResource(target_info.path, target_resource);
             self.notify();
         });
     },
@@ -245,7 +245,7 @@ DavSvnModel.prototype = {
     },
 
     // Resource
-    setResource: function(resource, path){
+    setResource: function(path, resource){
         if (path === ""){
             this.m_root_dir = resource;
             return;
