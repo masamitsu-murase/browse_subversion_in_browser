@@ -56,6 +56,9 @@ DavSvnResource.prototype = {
     isFile: function(){
         return this.type() == DavSvnResource.TYPE_FILE;
     },
+    isUnknown: function(){
+        return this.type() == DavSvnResource.TYPE_UNKNOWN;
+    },
 
     addChild: function(child){
         var name = child.name();
@@ -107,6 +110,9 @@ DavSvnResource.prototype = {
     },
     markLoaded: function(){
         this.m_state = DavSvnResource.STATE_LOADED;
+    },
+    isLoaded: function(){
+        return this.m_state == DavSvnResource.STATE_LOADED;
     },
 
     debugInfo: function(level){
@@ -174,6 +180,9 @@ DavSvnModel.prototype = {
             root_url: this.m_root_url
         };
     },
+
+    // Reload specified path.
+    // Directory state (opened/closed) is kept.
     reloadPath: function(path){
         var self = this;
 
@@ -207,6 +216,16 @@ DavSvnModel.prototype = {
             });
             target_resource.markLoaded();
             self.setResource(target_info.path, target_resource);
+            if (target.isDirectory() && target_resource.isDirectory()){
+                if (target.dirIsOpened()){
+                    target_resource.dirOpen();
+                }else{
+                    target_resource.dirClose();
+                }
+            }else if (target.isUnknown() && target_resource.isDirectory()){
+                // first loading
+                target_resource.dirOpen();
+            }
             self.notify();
         });
     },
@@ -265,10 +284,12 @@ DavSvnModel.prototype = {
             }else{
                 var new_dir = new DavSvnResource(name, DavSvnResource.TYPE_DIRECTORY);
                 dir.addChild(new_dir);
+                dir.dirOpen();
                 dir = new_dir;
             }
         });
         dir.addChild(resource);
+        dir.dirOpen();
     },
     resource: function(path){
         if (!this.m_root_dir){

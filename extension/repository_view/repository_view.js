@@ -39,11 +39,13 @@
 
         createResourceNodeTitle: function(rsc){
             var title = document.createElement("span");
+            var path_elem = document.createElement("span");
+            title.appendChild(path_elem);
 
             if (rsc.isRoot()){
-                title.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
+                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
             }else{
-                title.appendChild(document.createTextNode(rsc.name()));
+                path_elem.appendChild(document.createTextNode(rsc.name()));
             }
             var class_name = rsc.isDirectory() ? DirectoryView.CLASS_TYPE_DIRECTORY : DirectoryView.CLASS_TYPE_FILE;
             switch(rsc.state()){
@@ -66,14 +68,26 @@
             if (rsc.isDirectory()){
                 var path = rsc.path();
                 var self = this;
-                title.addEventListener("click", function(){
+                path_elem.addEventListener("click", function(){
                     if (self.m_log_view){
                         self.m_log_view.updateLog(path);
                     }
 
                     self.m_model.changePath(path);
-//                    self.m_model.reloadPath(path);
-                    self.m_model.toggleDirectory(path);
+                    if (rsc.isLoaded()){
+                        self.m_model.toggleDirectory(path)
+                    }else{
+                        self.m_model.reloadPath(path);
+                        self.m_model.openDirectory(path);
+                    }
+                });
+
+                var reload_elem = document.createElement("img");
+                title.appendChild(reload_elem);
+                reload_elem.src = "images/icon_folder_opened.png";
+                reload_elem.alt = "Reload";
+                reload_elem.addEventListener("click", function(e){
+                    self.m_model.reloadPath(path);
                 });
             }
 
@@ -91,7 +105,7 @@
             var title = this.createResourceNodeTitle(rsc);
             resource_title.appendChild(title);
 
-            if (rsc.isDirectory()){
+            if (rsc.isDirectory() && rsc.dirIsOpened()){
                 // Information of children
                 var children_root = document.createElement("dd");
                 children_root.className = DirectoryView.CLASS_CHILDREN_ROOT;
