@@ -215,11 +215,12 @@ DavSvnModel.prototype = {
 
     // Directory operation
     openDirectory: function(path, no_notify){
+        var resource = this.resource(path);
         if (!resource || !resource.isDirectory()){
             return;
         }
-        var changed = resource.dirClose();
-        if (changed && no_notify){
+        var changed = resource.dirOpen();
+        if (changed && !no_notify){
             this.notify();
         }
     },
@@ -228,8 +229,8 @@ DavSvnModel.prototype = {
         if (!resource || !resource.isDirectory()){
             return;
         }
-        var changed = resource.dirOpen();
-        if (changed && no_notify){
+        var changed = resource.dirClose();
+        if (changed && !no_notify){
             this.notify();
         }
     },

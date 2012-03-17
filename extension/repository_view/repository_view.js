@@ -57,6 +57,9 @@
                 class_name = class_name + " loaded";
                 break;
             }
+            if (rsc.isDirectory()){
+                class_name = class_name + " " + (rsc.dirIsOpened() ? "dir_opened" : "dir_closed");
+            }
             title.className = class_name;
 
             // event for title
@@ -69,7 +72,8 @@
                     }
 
                     self.m_model.changePath(path);
-                    self.m_model.reloadPath(path);
+//                    self.m_model.reloadPath(path);
+                    self.m_model.toggleDirectory(path);
                 });
             }
 
