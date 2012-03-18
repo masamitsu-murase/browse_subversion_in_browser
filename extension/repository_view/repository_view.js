@@ -43,12 +43,9 @@
             title.appendChild(path_elem);
 
             if (rsc.isRoot()){
-//                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
-                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url
-                                                              + ": " + rsc.info("author") + ": " + rsc.info("revision")));
+                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
             }else{
-//                path_elem.appendChild(document.createTextNode(rsc.name()));
-                path_elem.appendChild(document.createTextNode(rsc.name() + ": " + rsc.info("author") + ": " + rsc.info("revision")));
+                path_elem.appendChild(document.createTextNode(rsc.name()));
             }
             var class_name = rsc.isDirectory() ? DirectoryView.CLASS_TYPE_DIRECTORY : DirectoryView.CLASS_TYPE_FILE;
             switch(rsc.state()){
@@ -78,8 +75,10 @@
 
                     self.m_model.changePath(path);
                     if (rsc.isLoaded()){
+                        self.m_model.changePath(path);
                         self.m_model.toggleDirectory(path)
                     }else{
+                        self.m_model.changePath(path);
                         self.m_model.reloadPath(path);
                         self.m_model.openDirectory(path);
                     }
@@ -90,6 +89,7 @@
                 reload_elem.src = "images/icon_folder_opened.png";
                 reload_elem.alt = "Reload";
                 reload_elem.addEventListener("click", function(e){
+                    self.m_model.changePath(path);
                     self.m_model.reloadPath(path);
                 });
             }
@@ -132,6 +132,66 @@
     DirectoryView.CLASS_CHILDREN_ROOT = "svn_children_root";
     DirectoryView.CLASS_TYPE_DIRECTORY = "type_directory";
     DirectoryView.CLASS_TYPE_FILE = "type_file";
+
+
+    var FileListView = function(elem, model){
+        // construct file list table.
+        var table = document.createElement("table");
+        elem.appendChild(table);
+
+        var attrs = [ "author", "revision", "date", "size" ];
+
+        // header
+        var thead = document.createElement("thead");
+        table.appendChild(thead);
+        var tr = document.createElement("tr");
+        thead.appendChild(tr);
+        var th = document.createElement("th");
+        tr.appendChild(th);
+        th.appendChild(document.createTextNode("Name"));
+        attrs.forEach(function(attr){
+            th = document.createElement("th");
+            tr.appendChild(th);
+            th.appendChild(document.createElement(attr));
+        });
+
+        // tbody
+        var tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+
+        this.m_model = model;
+        this.m_tbody = tbody;
+    };
+    FileListView.prototype = {
+        update: function(){
+            var current_path = this.m_model.path();
+
+            // remove
+            var children = this.m_tbody.childNodes;
+            for (var i=0; i<children.length; i++){
+                this.m_tbody.removeChild(children[i]);
+            }
+
+            // add
+            var rsc = this.m_model.resource(current_path);
+            var self = this;
+            rsc.children().forEach(function(child){
+                var tr = document.createElement("tr");
+                self.m_tbody.appendChild(tr);
+
+                var td = document.createElement("td");
+                tr.appendChild(td);
+                td.appendChild(document.createTextNode(child.name()));
+
+                [ "author", "revision", "date", "size" ].forEach(function(attr){
+                    td = document.createElement("td");
+                    tr.appendChild(td);
+                    td.appendChild(document.createTextNode(child.info(attr)));
+                });
+            });
+        }
+    };
+    FileListView.CLASS_ROOT_TABLE = "file_list_view";
 
 
     var LogView = function(elem, model){
@@ -200,6 +260,10 @@
 
         var log_elem = document.getElementById("log");
         dv.setLogView(new LogView(log_elem, model));
+
+        // file list
+        var file_list_view = new FileListView(document.getElementById("file_list"), model);
+        model.addListener(file_list_view);
 
         /// test
         document.getElementById("change_revision").addEventListener("click", function(){

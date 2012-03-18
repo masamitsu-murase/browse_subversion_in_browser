@@ -252,6 +252,14 @@ DavSvnModel.prototype = {
         });
     },
     changePath: function(path){
+        var changed = (this.m_current_path != path);
+        this.m_current_path = path;
+        if (changed){
+            this.notify();
+        }
+    },
+    path: function(){
+        return this.m_current_path;
     },
 
     // Directory operation
