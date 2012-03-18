@@ -37,12 +37,18 @@ dd.svn_children_root{
 
 dd.svn_children_root > ul{
     list-style: none;
+    margin: 5px 0px;
+    padding-left: 1em;
+}
+
+dd.svn_children_root > ul > li > dl{
+    margin: 5px 0px;
 }
 
 /* file list */
 #file_list{
     float: right;
-    width: 20em;
+    width: 50%;
     overflow: auto;
 }
 table.file_list_view{
@@ -51,14 +57,22 @@ table.file_list_view{
 table.file_list_view th, table.file_list_view td{
     /* border: 1px solid black; */
 }
-table.file_list_view tr:nth-child(even){
+table.file_list_view tbody tr:nth-child(odd){
     background-color: #DDD;
+}
+table.file_list_view tbody td.loading{
+    padding-left: 2em;
+    background-image: url("./images/ajax_loader.gif") !important;
+    background-size: 1em;
+    background-position: left center;
+    background-repeat: no-repeat;
 }
 
 /* LogView */
 #log{
     float: right;
     width: 20em;
+    max-width: 25%;
     overflow: auto;
 }
 dl.log_view{

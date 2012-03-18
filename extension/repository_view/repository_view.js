@@ -5,8 +5,6 @@
         this.m_root_div = this.createRootDiv();
         this.m_view_elem.appendChild(this.m_root_div);
         this.m_model = model;
-
-        this.m_log_view = null;
     };
     DirectoryView.prototype = {
         update: function(){
@@ -24,10 +22,6 @@
             // append new child
             var dir = this.m_model.resource("");
             root_div.appendChild(this.createResourceNode(dir));
-        },
-
-        setLogView: function(log_view){
-            this.m_log_view = log_view;
         },
 
         createRootDiv: function(){
@@ -68,10 +62,6 @@
                 var path = rsc.path();
                 var self = this;
                 path_elem.addEventListener("click", function(){
-                    if (self.m_log_view){
-                        self.m_log_view.updateLog(path);
-                    }
-
                     self.m_model.changePath(path);
                     if (rsc.isLoaded()){
                         self.m_model.changePath(path);
@@ -83,9 +73,12 @@
                     }
                 });
 
+                // TODO
+                // Modify icon.
                 var reload_elem = document.createElement("img");
                 title.appendChild(reload_elem);
-                reload_elem.src = "images/icon_folder_opened.png";
+                reload_elem.src = "images/icon_reload.gif";
+                reload_elem.style.height = "1em";
                 reload_elem.alt = "Reload";
                 reload_elem.addEventListener("click", function(e){
                     self.m_model.changePath(path);
@@ -173,31 +166,52 @@
 
             // add
             var rsc = this.m_model.resource(current_path);
-            var self = this;
-            rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
+            if (rsc.isLoading()){
                 var tr = document.createElement("tr");
-                self.m_tbody.appendChild(tr);
+                this.m_tbody.appendChild(tr);
 
                 var td = document.createElement("td");
                 tr.appendChild(td);
-                td.appendChild(document.createTextNode(child.name()));
+                td.setAttribute("colspan", 5);
+                td.className = FileListView.CLASS_LOADING;
+                td.appendChild(document.createTextNode("Loading"));
+            }else{
+                var self = this;
+                rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
+                    var tr = document.createElement("tr");
+                    self.m_tbody.appendChild(tr);
 
-                [ "author", "revision", "date", "size" ].forEach(function(attr){
-                    td = document.createElement("td");
+                    var td = document.createElement("td");
                     tr.appendChild(td);
-                    td.appendChild(document.createTextNode(child.info(attr)));
+                    td.appendChild(document.createTextNode(child.name()));
+
+                    [ "author", "revision", "date", "size" ].forEach(function(attr){
+                        td = document.createElement("td");
+                        tr.appendChild(td);
+                        td.appendChild(document.createTextNode(child.info(attr)));
+                    });
                 });
-            });
+            }
         }
     };
     FileListView.CLASS_ROOT_TABLE = "file_list_view";
+    FileListView.CLASS_LOADING = "loading";
 
 
     var LogView = function(elem, model){
         this.m_view_elem = elem;
         this.m_model = model;
+        this.m_path = null;
     };
     LogView.prototype = {
+        update: function(){
+            var path = this.m_model.path();
+            if (this.m_path !== path){
+                this.m_path = path;
+                this.updateLog(path);
+            }
+        },
+
         updateLog: function(path){
             var url = this.m_model.repositoryInfo().root_url + path;
             var self = this;
@@ -243,6 +257,44 @@
     LogView.CLASS_LOG_VIEW = "log_view";
 
 
+    var BasicInfoView = function(elem, model){
+        this.m_model = model;
+
+        while(elem.firstChild){
+            elem.removeChild(elem.firstChild);
+        }
+
+        var dl = document.createElement("dl");
+        elem.appendChild(dl);
+        var dt = document.createElement("dt");
+        dl.appendChild(dt);
+        dt.appendChild(document.createTextNode("Path"));
+        var dd = document.createElement("dd");
+        dl.appendChild(dd);
+        this.m_path_elem = dd;
+
+        dt = document.createElement("dt");
+        dl.appendChild(dt);
+        dt.appendChild(document.createTextNode("Revision"));
+        dd = document.createElement("dd");
+        dl.appendChild(dd);
+        this.m_revision_elem = dd;
+    };
+    BasicInfoView.prototype = {
+        update: function(){
+            if (this.m_path_elem.firstChild){
+                this.m_path_elem.removeChild(this.m_path_elem.firstChild);
+            }
+            this.m_path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url + this.m_model.path()));
+
+            if (this.m_revision_elem.firstChild){
+                this.m_revision_elem.removeChild(this.m_revision_elem.firstChild);
+            }
+            this.m_revision_elem.appendChild(document.createTextNode(this.m_model.operationRevision()));
+        }
+    };
+
+
     var load = function(){
         // for test
         var elem = document.getElementById("test");
@@ -256,12 +308,16 @@
         var dv = new DirectoryView(elem, model);
         model.addListener(dv);
 
-        var log_elem = document.getElementById("log");
-        dv.setLogView(new LogView(log_elem, model));
+        var log_view = new LogView(document.getElementById("log"), model);
+        model.addListener(log_view);
 
         // file list
         var file_list_view = new FileListView(document.getElementById("file_list"), model);
         model.addListener(file_list_view);
+
+        // basic info
+        var basic_info_view = new BasicInfoView(document.getElementById("basic_info"), model);
+        model.addListener(basic_info_view);
 
         /// test
         document.getElementById("change_revision").addEventListener("click", function(){

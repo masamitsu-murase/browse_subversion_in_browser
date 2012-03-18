@@ -114,6 +114,9 @@ DavSvnResource.prototype = {
     isLoaded: function(){
         return this.m_state == DavSvnResource.STATE_LOADED;
     },
+    isLoading: function(){
+        return this.m_state == DavSvnResource.STATE_LOADING;
+    },
 
     info: function(attr){
         if (attr){
