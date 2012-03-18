@@ -138,6 +138,7 @@
         // construct file list table.
         var table = document.createElement("table");
         elem.appendChild(table);
+        table.className = FileListView.CLASS_ROOT_TABLE;
 
         var attrs = [ "author", "revision", "date", "size" ];
 

@@ -36,10 +36,24 @@ dd.svn_children_root > ul{
     list-style: none;
 }
 
-/* LogView */
-dl.log_view{
+/* file list */
+p#file_list{
     float: right;
     width: 20em;
+}
+table.file_list_view{
+    border-collapse: collapse;
+}
+table.file_list_view th, table.file_list_view td{
+    border: 1px solid black;
+}
+
+/* LogView */
+p#log{
+    float: right;
+    width: 20em;
+}
+dl.log_view{
 }
 dl.log_view > dt{
     word-wrap: break-word;
