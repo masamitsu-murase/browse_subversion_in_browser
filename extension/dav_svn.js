@@ -16,6 +16,25 @@ var gDavSvn = (function(){
         };
     };
 
+    var findFirstChildNodeValue = function(item, name){
+        var elem = item.getElementsByTagName(name);
+        if (!elem){
+            return null;
+        }
+
+        var first = elem[0];
+        if (!first){
+            return null;
+        }
+
+        var first_child = first.firstChild;
+        if (!first_child){
+            return null;
+        }
+
+        return first_child.nodeValue;
+    };
+
     var doXmlHttpRequest = function(method, url, header, body, callback){
         var url = url.replace(/\/$/, "");
 
@@ -226,11 +245,12 @@ var gDavSvn = (function(){
                 var tags = doc.getElementsByTagName("log-item");
                 for (var i=0; i<tags.length; i++){
                     var log = tags[i];
+                    var rev = findFirstChildNodeValue(log, "version-name");
                     logs.push({
-                        revision: parseInt(log.getElementsByTagName("version-name")[0].firstChild.nodeValue),
-                        comment: log.getElementsByTagName("comment")[0].firstChild.nodeValue,
-                        author: log.getElementsByTagName("creator-displayname")[0].firstChild.nodeValue,
-                        date: log.getElementsByTagName("date")[0].firstChild.nodeValue
+                        revision: ((rev || rev !== null) ? parseInt(rev) : null),
+                        comment: findFirstChildNodeValue(log, "comment"),
+                        author: findFirstChildNodeValue(log, "creator-displayname"),
+                        date: findFirstChildNodeValue(log, "date")
                     });
                 }
             }catch(e){
@@ -243,7 +263,13 @@ var gDavSvn = (function(){
 
     var davSvnGetResources = function(bc_url, callback){
         var body = '<?xml version="1.0" encoding="utf-8"?>'
-            + '<propfind xmlns="DAV:"><prop><resourcetype xmlns="DAV:"/></prop></propfind>';
+            + '<propfind xmlns="DAV:"><prop>'
+            + '<creator-displayname xmlns="DAV:"/>'
+            + '<creationdate xmlns="DAV:"/>'
+            + '<version-name xmlns="DAV:"/>'
+            + '<getcontentlength xmlns="DAV:"/>'
+            + '<resourcetype xmlns="DAV:"/>'
+            + '</prop></propfind>';
         davSvnPropfind(bc_url, { "Depth": 1 }, body, function(res){
             var array = [];
             try{
@@ -258,9 +284,14 @@ var gDavSvn = (function(){
 
                     var type = (item.getElementsByTagName("resourcetype")[0]
                                 .getElementsByTagName("collection").length == 1) ? "directory" : "file";
+                    var rev = findFirstChildNodeValue(item, "version-name");
                     array.push({
                         href: href,
-                        type: type
+                        type: type,
+                        author: findFirstChildNodeValue(item, "creator-displayname"),
+                        date: findFirstChildNodeValue(item, "creationdate"),
+                        revision: ((rev || rev !== null) ? parseInt(rev) : null),
+                        size: findFirstChildNodeValue(item, "getcontentlength")
                     });
                 }
             }catch(e){
@@ -436,7 +467,11 @@ var gDavSvn = (function(){
                         file_list: file_list.map(function(item){
                             return {
                                 path: item.href.substr(bc.bc.length).replace(/\/$/, ""),
-                                type: item.type
+                                type: item.type,
+                                revision: item.revision,
+                                author: item.author,
+                                date: item.date,
+                                size: item.size
                             };
                         }),
                         revision: rev

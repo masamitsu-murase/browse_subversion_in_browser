@@ -115,6 +115,14 @@ DavSvnResource.prototype = {
         return this.m_state == DavSvnResource.STATE_LOADED;
     },
 
+    info: function(attr){
+        if (attr){
+            return this.m_info[attr];
+        }else{
+            return this.m_info;
+        }
+    },
+
     debugInfo: function(level){
         level = (level || 0);
         var space = "";
@@ -205,13 +213,27 @@ DavSvnModel.prototype = {
 
             // add files
             var target_info = obj.file_list.shift();
+            var info = {
+                author: target_info.author,
+                revision: target_info.revision,
+                date: target_info.date,
+                size: target_info.size
+            };
             var target_resource = new DavSvnResource(target_info.path.split("/").pop(),
                                                      (target_info.type == "file" ? DavSvnResource.TYPE_FILE
-                                                      : DavSvnResource.TYPE_DIRECTORY));
+                                                      : DavSvnResource.TYPE_DIRECTORY),
+                                                     info);
             obj.file_list.forEach(function(file){
+                var info = {
+                    author: file.author,
+                    revision: file.revision,
+                    date: file.date,
+                    size: file.size
+                };
                 var child = new DavSvnResource(file.path.split("/").pop(),
                                                (file.type == "file" ? DavSvnResource.TYPE_FILE
-                                                : DavSvnResource.TYPE_DIRECTORY));
+                                                : DavSvnResource.TYPE_DIRECTORY),
+                                               info);
                 target_resource.addChild(child);
             });
             target_resource.markLoaded();

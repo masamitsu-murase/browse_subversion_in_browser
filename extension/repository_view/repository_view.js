@@ -43,9 +43,12 @@
             title.appendChild(path_elem);
 
             if (rsc.isRoot()){
-                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
+//                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url));
+                path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url
+                                                              + ": " + rsc.info("author") + ": " + rsc.info("revision")));
             }else{
-                path_elem.appendChild(document.createTextNode(rsc.name()));
+//                path_elem.appendChild(document.createTextNode(rsc.name()));
+                path_elem.appendChild(document.createTextNode(rsc.name() + ": " + rsc.info("author") + ": " + rsc.info("revision")));
             }
             var class_name = rsc.isDirectory() ? DirectoryView.CLASS_TYPE_DIRECTORY : DirectoryView.CLASS_TYPE_FILE;
             switch(rsc.state()){
