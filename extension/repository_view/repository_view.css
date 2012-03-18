@@ -1,5 +1,8 @@
 
 /* DirectoryView */
+#output{
+    overflow: auto;
+}
 div.svn_root{
 }
 dt.svn_resource_title > span{
@@ -37,21 +40,26 @@ dd.svn_children_root > ul{
 }
 
 /* file list */
-p#file_list{
+#file_list{
     float: right;
     width: 20em;
+    overflow: auto;
 }
 table.file_list_view{
     border-collapse: collapse;
 }
 table.file_list_view th, table.file_list_view td{
-    border: 1px solid black;
+    /* border: 1px solid black; */
+}
+table.file_list_view tr:nth-child(even){
+    background-color: #DDD;
 }
 
 /* LogView */
-p#log{
+#log{
     float: right;
     width: 20em;
+    overflow: auto;
 }
 dl.log_view{
 }

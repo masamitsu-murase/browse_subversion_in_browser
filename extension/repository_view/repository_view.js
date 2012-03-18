@@ -17,9 +17,8 @@
             var root_div = this.m_root_div;
 
             // remove current children
-            var children = root_div.childNodes;
-            for (var i=0; i<children.length; i++){
-                root_div.removeChild(children[i]);
+            while(root_div.firstChild){
+                root_div.removeChild(root_div.firstChild);
             }
 
             // append new child
@@ -117,7 +116,7 @@
                 var ul_children = document.createElement("ul");
                 children_root.appendChild(ul_children);
 
-                rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
+                rsc.childDirs().forEach(function(child){
                     var li = document.createElement("li");
                     ul_children.appendChild(li);
                     li.appendChild(this.createResourceNode(child));
@@ -153,7 +152,7 @@
         attrs.forEach(function(attr){
             th = document.createElement("th");
             tr.appendChild(th);
-            th.appendChild(document.createElement(attr));
+            th.appendChild(document.createTextNode(attr));
         });
 
         // tbody
@@ -168,15 +167,14 @@
             var current_path = this.m_model.path();
 
             // remove
-            var children = this.m_tbody.childNodes;
-            for (var i=0; i<children.length; i++){
-                this.m_tbody.removeChild(children[i]);
+            while(this.m_tbody.firstChild){
+                this.m_tbody.removeChild(this.m_tbody.firstChild);
             }
 
             // add
             var rsc = this.m_model.resource(current_path);
             var self = this;
-            rsc.children().forEach(function(child){
+            rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
                 var tr = document.createElement("tr");
                 self.m_tbody.appendChild(tr);
 
@@ -213,9 +211,8 @@
         },
 
         updateLogHelper: function(url, logs){
-            var children = this.m_view_elem.childNodes;
-            for (var i=0; i<children.length; i++){
-                this.m_view_elem.removeChild(children[i]);
+            while(this.m_view_elem.firstChild){
+                this.m_view_elem.removeChild(this.m_view_elem.firstChild);
             }
 
             var elem = document.createElement("dl");
