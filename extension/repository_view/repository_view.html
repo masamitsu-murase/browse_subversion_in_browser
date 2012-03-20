@@ -19,16 +19,24 @@
 <body>
   <h1>Browse Subversion</h1>
   <p>
-    <a id="test">test</a>
-  </p>
-  <p>
     <input type="text" value="1000000" id="revision" />
     <button id="change_revision">Change Revision</button>
   </p>
+
   <div id="basic_info"></div>
+  <div id="main">
+    <h2>Contents</h2>
+    <div id="content_frame">
+      <div id="dir_tree" class="ui-widget-content"></div>
+      <div id="file_list" class="ui-widget-content"></div>
+    </div>
+
+    <h2>Logs</h2>
+    <div id="log_frame">
+      <div id="log_view"></div>
+    </div>
+  </div>
   <div id="log"></div>
-  <div id="file_list"></div>
-  <div id="output" style="white-space: pre;"></div>
   <hr style="clear: both;" />
   <div id="tree"></div>
 </body>

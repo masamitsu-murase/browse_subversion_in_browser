@@ -16,6 +16,30 @@ var gDavSvn = (function(){
         };
     };
 
+    var parseSvnDate = function(date_str){
+        // 2009-08-07T19:24:38.164352Z
+        //                       1          2         3          4         5            6               8     9       10        11
+        var reg = new RegExp("^([0-9]+)-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2}\\.[0-9]+)((Z)|(\\+|-)([0-9]{2}):([0-9]{2}))$");
+        var match_data = reg.exec(date_str);
+        if (!match_data){
+            return null;
+        }
+
+        var sec = parseInt(match_data[6]);
+        var msec = Math.round((parseFloat(match_data[6]) - sec) * 1000);
+        var value = Date.UTC(parseInt(match_data[1]), parseInt(match_data[2]), parseInt(match_data[3]),
+                             parseInt(match_data[4]), parseInt(match_data[5]), sec, msec);
+        if (!match_data[8]){
+            var diff = parseInt(match_data[10]) * 3600 * 1000 + parseInt(match_data[11]) * 60 * 1000;
+            if (match_data[9] == "+"){
+                value -= diff;
+            }else{
+                value += diff;
+            }
+        }
+        return new Date(value);
+    };
+
     var findFirstChildNodeValue = function(item, name){
         var elem = item.getElementsByTagName(name);
         if (!elem){
@@ -250,7 +274,7 @@ var gDavSvn = (function(){
                         revision: ((rev || rev !== null) ? parseInt(rev) : null),
                         comment: findFirstChildNodeValue(log, "comment"),
                         author: findFirstChildNodeValue(log, "creator-displayname"),
-                        date: findFirstChildNodeValue(log, "date")
+                        date: parseSvnDate(findFirstChildNodeValue(log, "date"))
                     });
                 }
             }catch(e){
@@ -289,7 +313,7 @@ var gDavSvn = (function(){
                         href: href,
                         type: type,
                         author: findFirstChildNodeValue(item, "creator-displayname"),
-                        date: findFirstChildNodeValue(item, "creationdate"),
+                        date: parseSvnDate(findFirstChildNodeValue(item, "creationdate")),
                         revision: ((rev || rev !== null) ? parseInt(rev) : null),
                         size: findFirstChildNodeValue(item, "getcontentlength")
                     });
