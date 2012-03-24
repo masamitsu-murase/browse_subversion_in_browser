@@ -1,5 +1,66 @@
 
 $(function(){
+    var i18n = {
+        date: function(date, format){
+            var rjust = function(num, width){
+                var str = "" + num;
+                if (str.length < width){
+                    for (var i=0, len=width-str.length; i<len; i++){
+                        str = "0" + str;
+                    }
+                }
+                return str;
+            };
+
+            switch(navigator.language){
+            case "ja":
+                switch(format){
+                case i18n.DATE_DATE_ONLY:
+                    return rjust(date.getFullYear(), 4)
+                        + "/" + rjust(date.getMonth() + 1, 2)
+                        + "/" + rjust(date.getDate(), 2);
+                case i18n.DATE_TIME_ONLY:
+                    return rjust(date.getHours(), 2)
+                        + ":" + rjust(date.getMinutes(), 2)
+                        + ":" + rjust(date.getSeconds(), 2);
+                case i18n.DATE_DATE_TIME:
+                default:
+                    return rjust(date.getFullYear(), 4)
+                        + "/" + rjust(date.getMonth() + 1, 2)
+                        + "/" + rjust(date.getDate(), 2)
+                        + " " + rjust(date.getHours(), 2)
+                        + ":" + rjust(date.getMinutes(), 2)
+                        + ":" + rjust(date.getSeconds(), 2);
+                }
+                break;
+            case "en":
+            default:
+                switch(format){
+                case i18n.DATE_DATE_ONLY:
+                    return rjust(date.getMonth() + 1, 2)
+                        + "/" + rjust(date.getDate(), 2)
+                        + "/" + rjust(date.getFullYear(), 4);
+                case i18n.DATE_TIME_ONLY:
+                    return rjust(date.getHours(), 2)
+                        + ":" + rjust(date.getMinutes(), 2)
+                        + ":" + rjust(date.getSeconds(), 2);
+                case i18n.DATE_DATE_TIME:
+                default:
+                    return rjust(date.getMonth() + 1, 2)
+                        + "/" + rjust(date.getDate(), 2)
+                        + "/" + rjust(date.getFullYear(), 4)
+                        + " " + rjust(date.getHours(), 2)
+                        + ":" + rjust(date.getMinutes(), 2)
+                        + ":" + rjust(date.getSeconds(), 2);
+                }
+                break;
+            }
+        },
+        DATE_DATE_ONLY: 1,
+        DATE_TIME_ONLY: 2,
+        DATE_DATE_TIME: 3
+    };
+
     var DirectoryView = function(view_elem, model){
         this.m_view_elem = view_elem;
         this.m_root_div = this.createRootDiv();
@@ -47,7 +108,7 @@ $(function(){
             }
             class_name += " " + (dir.dirIsOpened() ? "dir_opened" : "dir_closed");
             if (dir.path() == this.m_model.path()){
-                class_name += " ui-state-focus";
+                class_name += " ui-state-active";
             }
             $(parent).addClass(class_name);
             $(parent).hover(function(){
@@ -162,18 +223,24 @@ $(function(){
         var attrs = FileListView.ROW_ATTRS;
 
         // header
+        var createHeaderElement = function(th, text_name){
+            var button = document.createElement("button");
+            th.appendChild(button);
+            $(button).button({ label: FileListView["TEXT_" + text_name.toUpperCase()] });
+        };
+
         var thead = document.createElement("thead");
         table.appendChild(thead);
         var tr = document.createElement("tr");
         thead.appendChild(tr);
         var th = document.createElement("th");
         tr.appendChild(th);
-        th.appendChild(document.createTextNode(FileListView.TEXT_NAME));
+        createHeaderElement(th, "name");
         attrs.forEach(function(attr){
             th = document.createElement("th");
             tr.appendChild(th);
             $(th).addClass(attr);
-            th.appendChild(document.createTextNode(FileListView["TEXT_" + attr.toUpperCase()]));
+            createHeaderElement(th, attr);
         });
 
         // tbody
@@ -211,10 +278,17 @@ $(function(){
                 rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
                     var tr = document.createElement("tr");
                     self.m_tbody.appendChild(tr);
+                    $(tr).addClass("ui-state-default");
+                    $(tr).hover(function(){
+                        $(this).removeClass("ui-state-default").addClass("ui-state-hover");
+                    }, function(){
+                        $(this).removeClass("ui-state-hover").addClass("ui-state-default");
+                    });
 
                     // name
                     var td = document.createElement("td");
                     tr.appendChild(td);
+                    $(td).addClass("name");
                     var icon = document.createElement("span");
                     td.appendChild(icon);
                     var class_name = "ui-icon ui-icon-inline-block";
@@ -229,23 +303,28 @@ $(function(){
                     // author
                     td = document.createElement("td");
                     tr.appendChild(td);
+                    $(td).addClass("author");
                     td.appendChild(document.createTextNode(child.info("author")));
 
                     // revision
                     td = document.createElement("td");
                     tr.appendChild(td);
+                    $(td).addClass("revision");
                     td.appendChild(document.createTextNode(child.info("revision")));
 
                     // date
                     td = document.createElement("td");
                     tr.appendChild(td);
+                    $(td).addClass("date");
                     var time = document.createElement("time");
                     td.appendChild(time);
-                    time.appendChild(document.createTextNode(child.info("date").toISOString()));
+                    time.appendChild(document.createTextNode(i18n.date(child.info("date"))));
+                    time.setAttribute("datetime", child.info("date").toLocaleString());
 
                     // size
                     td = document.createElement("td");
                     tr.appendChild(td);
+                    $(td).addClass("size");
                     if (child.isFile()){
                         var size = child.info("size");
                         var size_str = "";
