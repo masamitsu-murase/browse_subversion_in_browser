@@ -100,6 +100,10 @@ DavSvnResource.prototype = {
         return path;
     },
 
+    contentUrl: function(){
+        return this.m_info.content_url;
+    },
+
     markNotLoaded: function(){
         this.m_children = {};
         this.m_state = DavSvnResource.STATE_NOT_LOADED;
@@ -220,7 +224,8 @@ DavSvnModel.prototype = {
                 author: target_info.author,
                 revision: target_info.revision,
                 date: target_info.date,
-                size: target_info.size
+                size: target_info.size,
+                content_url: target_info.href
             };
             var target_resource = new DavSvnResource(target_info.path.split("/").pop(),
                                                      (target_info.type == "file" ? DavSvnResource.TYPE_FILE
@@ -231,7 +236,8 @@ DavSvnModel.prototype = {
                     author: file.author,
                     revision: file.revision,
                     date: file.date,
-                    size: file.size
+                    size: file.size,
+                    content_url: file.href
                 };
                 var child = new DavSvnResource(file.path.split("/").pop(),
                                                (file.type == "file" ? DavSvnResource.TYPE_FILE
@@ -263,6 +269,9 @@ DavSvnModel.prototype = {
     },
     path: function(){
         return this.m_current_path;
+    },
+    currentPath: function(){
+        return this.path();
     },
 
     // Directory operation

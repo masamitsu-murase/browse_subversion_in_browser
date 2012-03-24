@@ -372,11 +372,13 @@ $(function(){
             var class_name = "ui-icon ui-icon-inline-block";
             if (rsc.isDirectory()){
                 class_name += " ui-icon-folder-collapsed";
-            }else{
+            }else if (rsc.isFile()){
                 class_name += " ui-icon-document";
+            }else{
+                class_name += " ui-icon-help";
             }
             $(icon).addClass(class_name);
-            var text_elem = document.createElement("span");
+            var text_elem = document.createElement("a");
             td.appendChild(text_elem);
             $(text_elem).addClass(FileListView.CLASS_DIR_LINK);
             text_elem.appendChild(document.createTextNode(text || rsc.name()));
@@ -390,6 +392,8 @@ $(function(){
                         self.m_model.reloadPath(rsc.path());
                     }
                 });
+            }else if (rsc.isFile()){
+                $(text_elem).attr("href", rsc.contentUrl());
             }
 
             // author

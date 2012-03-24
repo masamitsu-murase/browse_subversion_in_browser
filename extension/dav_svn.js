@@ -302,10 +302,6 @@ var gDavSvn = (function(){
                 for (var i=0; i<list.length; i++){
                     var item = list[i];
                     var href = item.getElementsByTagName("href")[0].firstChild.nodeValue;
-                    if (href == bc_url){
-                        continue;
-                    }
-
                     var type = (item.getElementsByTagName("resourcetype")[0]
                                 .getElementsByTagName("collection").length == 1) ? "directory" : "file";
                     var rev = findFirstChildNodeValue(item, "version-name");
@@ -492,6 +488,7 @@ var gDavSvn = (function(){
                         file_list: file_list.map(function(item){
                             return {
                                 path: item.href.substr(bc.bc.length).replace(/\/$/, ""),
+                                href: (base_url + item.href),
                                 type: item.type,
                                 revision: item.revision,
                                 author: item.author,
