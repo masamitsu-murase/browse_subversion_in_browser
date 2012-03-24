@@ -103,15 +103,33 @@ table.file_list_view tbody td.name > .dir_link:hover{
     text-decoration: underline;
 }
 
+/*********************************************/
 /* LogView */
 #log{
     overflow: auto;
 }
 dl.log_view{
 }
-dl.log_view > dt{
-    word-wrap: break-word;
-    white-space: pre-wrap;
+dl.log_view > dd > dl > dt{
+    cursor: pointer;
+}
+dl.log_view > dd > dl > dt > span.revision{
+    text-align: right;
+    padding: 0.1em 0.5em;
+    font-size: larger;
+}
+dl.log_view > dd > dl > dt > time.date{
+    text-align: left;
+    padding: 0.1em 0.5em;
+}
+dl.log_view > dd > dl > dt > span.author{
+    text-align: left;
+    padding: 0.1em 0.5em;
+}
+dl.log_view > dd > dl > dt > span.comment{
+    text-align: left;
+    padding: 0.1em 0.5em;
+    font-family: monospace;
 }
 dl.log_view > dd > dl > dt:nth-child(4n + 1), dl.log_view > dd > dl > dd:nth-child(4n + 2){
     background-color: #EEE;
@@ -119,11 +137,8 @@ dl.log_view > dd > dl > dt:nth-child(4n + 1), dl.log_view > dd > dl > dd:nth-chi
 dl.log_view > dd > dl > dt:nth-child(4n + 3), dl.log_view > dd > dl > dd:nth-child(4n + 4){
     background-color: #FFF;
 }
-dl.log_view > dd > dl > dt{
-    word-wrap: break-word;
-    white-space: pre-wrap;
-}
 dl.log_view > dd > dl > dd > div{
     word-wrap: break-word;
     white-space: pre-wrap;
+    font-family: monospace;
 }

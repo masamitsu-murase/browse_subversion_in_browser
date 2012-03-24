@@ -257,6 +257,7 @@ var gDavSvn = (function(){
             + '<S:start-revision>' + start_rev + '</S:start-revision>'
             + '<S:end-revision>' + end_rev + '</S:end-revision>'
             + '<S:limit>' + limit + '</S:limit>'
+            + '<S:discover-changed-paths />'
             + '<S:revprop>svn:author</S:revprop>'
             + '<S:revprop>svn:date</S:revprop>'
             + '<S:revprop>svn:log</S:revprop>'

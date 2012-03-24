@@ -494,18 +494,20 @@ $(function(){
                     return;
                 }
 
-                self.updateLogHelper(url, obj.logs);
+                self.updateLogList(url, obj.logs);
             });
         },
 
-        updateLogHelper: function(url, logs){
+        updateLogList: function(url, logs){
+            // remove current logs
             while(this.m_view_elem.firstChild){
                 this.m_view_elem.removeChild(this.m_view_elem.firstChild);
             }
 
+            // add
             var elem = document.createElement("dl");
             this.m_view_elem.appendChild(elem);
-            elem.className = LogView.CLASS_LOG_VIEW;
+            $(elem).addClass(LogView.CLASS_LOG_VIEW);
 
             var title = document.createElement("dt");
             elem.appendChild(title);
@@ -518,17 +520,69 @@ $(function(){
             logs.forEach(function(log){
                 var dt = document.createElement("dt");
                 logs_root.appendChild(dt);
-                dt.appendChild(document.createTextNode(log.revision + ": " + log.author + ": " + log.date));
 
+                // revision
+                var elem = document.createElement("span");
+                dt.appendChild(elem);
+                $(elem).addClass(LogView.CLASS_REVISION);
+                elem.appendChild(document.createTextNode(log.revision));
+
+                // date
+                elem = document.createElement("time");
+                dt.appendChild(elem);
+                $(elem).addClass(LogView.CLASS_DATE);
+                elem.appendChild(document.createTextNode(i18n.date(log.date)));
+                elem.setAttribute("datetime", log.date.toLocaleString());
+
+                // author
+                elem = document.createElement("span");
+                dt.appendChild(elem);
+                $(elem).addClass(LogView.CLASS_AUTHOR);
+                elem.appendChild(document.createTextNode(log.author));
+
+                // first line of log
+                elem = document.createElement("span");
+                dt.appendChild(elem);
+                $(elem).addClass(LogView.CLASS_COMMENT);
+                var length = log.comment.indexOf("\n");
+                if (length < 0 || length > LogView.COMMENT_LENGTH){
+                    length = LogView.COMMENT_LENGTH;
+                }
+                var text = log.comment.substr(0, length);
+                if (text.length < log.comment.length){
+                    text += "...";
+                }
+                elem.appendChild(document.createTextNode(text));
+
+                // log
                 var dd = document.createElement("dd");
                 logs_root.appendChild(dd);
                 var div = document.createElement("div");
                 dd.appendChild(div);
                 div.appendChild(document.createTextNode(log.comment));
+                $(div).hide();  // log comment is hidden in default.
+
+                // toggle log comment
+                $(dt).addClass(LogView.CLASS_COLLAPSED);
+                $(dt).click(function(){
+                    if ($(this).hasClass(LogView.CLASS_COLLAPSED)){
+                        $(this).removeClass(LogView.CLASS_COLLAPSED);
+                        $(this).next().children().show("blind");
+                    }else{
+                        $(this).addClass(LogView.CLASS_COLLAPSED);
+                        $(this).next().children().hide("blind");
+                    }
+                });
             });
         }
     };
     LogView.CLASS_LOG_VIEW = "log_view";
+    LogView.CLASS_REVISION = "revision";
+    LogView.CLASS_AUTHOR = "author";
+    LogView.CLASS_DATE = "date";
+    LogView.CLASS_COMMENT = "comment";
+    LogView.CLASS_COLLAPSED = "collapsed";
+    LogView.COMMENT_LENGTH = 40;
 
 
     var BasicInfoView = function(elem, model){
