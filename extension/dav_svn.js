@@ -309,13 +309,14 @@ var gDavSvn = (function(){
                     var type = (item.getElementsByTagName("resourcetype")[0]
                                 .getElementsByTagName("collection").length == 1) ? "directory" : "file";
                     var rev = findFirstChildNodeValue(item, "version-name");
+                    var size = findFirstChildNodeValue(item, "getcontentlength");
                     array.push({
                         href: href,
                         type: type,
                         author: findFirstChildNodeValue(item, "creator-displayname"),
                         date: parseSvnDate(findFirstChildNodeValue(item, "creationdate")),
                         revision: ((rev || rev !== null) ? parseInt(rev) : null),
-                        size: findFirstChildNodeValue(item, "getcontentlength")
+                        size: ((size || size !== null) ? parseInt(size) : null)
                     });
                 }
             }catch(e){

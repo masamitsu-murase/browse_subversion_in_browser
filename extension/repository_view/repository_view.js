@@ -108,7 +108,7 @@ $(function(){
             }
             class_name += " " + (dir.dirIsOpened() ? "dir_opened" : "dir_closed");
             if (dir.path() == this.m_model.path()){
-                class_name += " ui-state-active";
+                class_name += " ui-state-highlight";
             }
             $(parent).addClass(class_name);
             $(parent).hover(function(){
@@ -220,25 +220,38 @@ $(function(){
         elem.appendChild(table);
         table.className = FileListView.CLASS_ROOT_TABLE;
 
+        var self = this;
         var attrs = FileListView.ROW_ATTRS;
 
         // header
-        var createHeaderElement = function(th, text_name){
+        var createHeaderElement = function(th, attr){
             var button = document.createElement("button");
             th.appendChild(button);
-            $(button).button({ label: FileListView["TEXT_" + text_name.toUpperCase()] });
+            $(button).button({ label: FileListView["TEXT_" + attr.toUpperCase()] });
+            $(button).click(function(){
+                if (self.m_sort.attr == attr){
+                    self.m_sort.reverse = !(self.m_sort.reverse);
+                }else{
+                    self.m_sort.attr = attr;
+                    self.m_sort.reverse = false;
+                }
+                self.update();
+            });
         };
 
+        var head = [];
         var thead = document.createElement("thead");
         table.appendChild(thead);
         var tr = document.createElement("tr");
         thead.appendChild(tr);
         var th = document.createElement("th");
         tr.appendChild(th);
+        head.push(th);
         createHeaderElement(th, "name");
         attrs.forEach(function(attr){
             th = document.createElement("th");
             tr.appendChild(th);
+            head.push(th);
             $(th).addClass(attr);
             createHeaderElement(th, attr);
         });
@@ -248,11 +261,17 @@ $(function(){
         table.appendChild(tbody);
 
         this.m_model = model;
+        this.m_thead = head;
         this.m_tbody = tbody;
+        this.m_sort = { attr: "name", reverse: false };
+
+        this.updateSortingHint();
     };
     FileListView.prototype = {
         update: function(){
             var current_path = this.m_model.path();
+
+            this.updateSortingHint();
 
             // remove
             while(this.m_tbody.firstChild){
@@ -272,75 +291,168 @@ $(function(){
                 tr.appendChild(td);
                 td.setAttribute("colspan", attrs.length + 1);
                 td.className = FileListView.CLASS_LOADING;
-                td.appendChild(document.createTextNode("Loading"));
+
+                var span = document.createElement("span");
+                td.appendChild(span);
+                span.appendChild(document.createTextNode(FileListView.TEXT_LOADING));
             }else{
-                var self = this;
-                rsc.childDirs().concat(rsc.childFiles()).forEach(function(child){
-                    var tr = document.createElement("tr");
-                    self.m_tbody.appendChild(tr);
-                    $(tr).addClass("ui-state-default");
-                    $(tr).hover(function(){
-                        $(this).removeClass("ui-state-default").addClass("ui-state-hover");
-                    }, function(){
-                        $(this).removeClass("ui-state-hover").addClass("ui-state-default");
-                    });
-
-                    // name
-                    var td = document.createElement("td");
-                    tr.appendChild(td);
-                    $(td).addClass("name");
-                    var icon = document.createElement("span");
-                    td.appendChild(icon);
-                    var class_name = "ui-icon ui-icon-inline-block";
-                    if (child.isDirectory()){
-                        class_name += " ui-icon-folder-collapsed";
-                    }else{
-                        class_name += " ui-icon-document";
-                    }
-                    $(icon).addClass(class_name);
-                    td.appendChild(document.createTextNode(child.name()));
-
-                    // author
-                    td = document.createElement("td");
-                    tr.appendChild(td);
-                    $(td).addClass("author");
-                    td.appendChild(document.createTextNode(child.info("author")));
-
-                    // revision
-                    td = document.createElement("td");
-                    tr.appendChild(td);
-                    $(td).addClass("revision");
-                    td.appendChild(document.createTextNode(child.info("revision")));
-
-                    // date
-                    td = document.createElement("td");
-                    tr.appendChild(td);
-                    $(td).addClass("date");
-                    var time = document.createElement("time");
-                    td.appendChild(time);
-                    time.appendChild(document.createTextNode(i18n.date(child.info("date"))));
-                    time.setAttribute("datetime", child.info("date").toLocaleString());
-
-                    // size
-                    td = document.createElement("td");
-                    tr.appendChild(td);
-                    $(td).addClass("size");
-                    if (child.isFile()){
-                        var size = child.info("size");
-                        var size_str = "";
-                        if (size < 1000){
-                            size_str = size + " B";
-                        }else if (size < 1000*1000){
-                            size_str = (Math.round(size / 100.0) / 10.0) + " KB";
+                var sort_by = null;
+                switch(this.m_sort.attr){
+                case "author":
+                case "revision":
+                case "size":
+                    var attr = this.m_sort.attr;
+                    sort_by = function(item){ return item.info(attr); };
+                    break;
+                case "date":
+                    sort_by = function(item){ return item.info("date").getTime(); };
+                    break;
+                case "name":
+                default:
+                    sort_by = function(item){ return item.name(); };
+                }
+                var createSorter = function(sort_by){
+                    return function(l, r){
+                        var lv = sort_by(l);
+                        var rv = sort_by(r);
+                        if (lv < rv){
+                            return -1;
+                        }else if (lv == rv){
+                            return 0;
                         }else{
-                            size_str = (Math.round(size / (1000 * 100.0)) / 10.0) + " MB";
+                            return 1;
                         }
-                        td.appendChild(document.createTextNode(size_str));
-                        td.setAttribute("title", size + " Byte");
+                    };
+                };
+                var createReversedSorter = function(sorter){
+                    return function(l, r){
+                        return -sorter(l, r);
+                    };
+                };
+
+                var attr_sorter = createSorter(sort_by);
+                if (this.m_sort.reverse){
+                    attr_sorter = createReversedSorter(attr_sorter);
+                }
+
+                var name_sorter = createSorter(function(item){ return item.name(); });
+                var sorter = function(l, r){
+                    var ret = attr_sorter(l, r);
+                    if (ret != 0){
+                        return ret;
+                    }
+                    return name_sorter(l, r);
+                };
+
+                rsc.childDirs().sort(sorter).forEach(function(item){
+                    this.createRow(item);
+                }, this);
+                rsc.childFiles().sort(sorter).forEach(function(item){
+                    this.createRow(item);
+                }, this);
+            }
+        },
+
+        createRow: function(rsc, text /* =null */){
+            var tr = document.createElement("tr");
+            this.m_tbody.appendChild(tr);
+            $(tr).addClass("ui-state-default");
+            $(tr).hover(function(){
+                $(this).removeClass("ui-state-default").addClass("ui-state-hover");
+            }, function(){
+                $(this).removeClass("ui-state-hover").addClass("ui-state-default");
+            });
+
+            // name
+            var td = document.createElement("td");
+            tr.appendChild(td);
+            $(td).addClass("name");
+            var icon = document.createElement("span");
+            td.appendChild(icon);
+            var class_name = "ui-icon ui-icon-inline-block";
+            if (rsc.isDirectory()){
+                class_name += " ui-icon-folder-collapsed";
+            }else{
+                class_name += " ui-icon-document";
+            }
+            $(icon).addClass(class_name);
+            var text_elem = document.createElement("span");
+            td.appendChild(text_elem);
+            $(text_elem).addClass(FileListView.CLASS_DIR_LINK);
+            text_elem.appendChild(document.createTextNode(text || rsc.name()));
+            if (rsc.isDirectory()){
+                var self = this;
+                $(text_elem).click(function(){
+                    if (rsc.isLoaded()){
+                        self.m_model.changePath(rsc.path());
                     }else{
-                        td.appendChild(document.createTextNode(" - "));
+                        self.m_model.changePath(rsc.path());
+                        self.m_model.reloadPath(rsc.path());
                     }
                 });
+            }
+
+            // author
+            td = document.createElement("td");
+            tr.appendChild(td);
+            $(td).addClass("author");
+            td.appendChild(document.createTextNode(rsc.info("author")));
+
+            // revision
+            td = document.createElement("td");
+            tr.appendChild(td);
+            $(td).addClass("revision");
+            td.appendChild(document.createTextNode(rsc.info("revision")));
+
+            // date
+            td = document.createElement("td");
+            tr.appendChild(td);
+            $(td).addClass("date");
+            var time = document.createElement("time");
+            td.appendChild(time);
+            time.appendChild(document.createTextNode(i18n.date(rsc.info("date"))));
+            time.setAttribute("datetime", rsc.info("date").toLocaleString());
+
+            // size
+            td = document.createElement("td");
+            tr.appendChild(td);
+            $(td).addClass("size");
+            if (rsc.isFile()){
+                var size = rsc.info("size");
+                var size_str = "";
+                if (size < 1000){
+                    size_str = size + " B";
+                }else if (size < 1000*1000){
+                    size_str = (Math.round(size / 100.0) / 10.0) + " KB";
+                }else{
+                    size_str = (Math.round(size / (1000 * 100.0)) / 10.0) + " MB";
+                }
+                td.appendChild(document.createTextNode(size_str));
+                td.setAttribute("title", size + " Byte");
+            }else{
+                td.appendChild(document.createTextNode(" - "));
+            }
+        },
+
+        updateSortingHint: function(){
+            var icon = this.m_sort.reverse ? "ui-icon-carat-1-n" : "ui-icon-carat-1-s";
+            if (this.m_sort.attr == "name"){
+                $(this.m_thead[0]).find("button").button("option", "icons", { primary: null, secondary: icon });
+                FileListView.ROW_ATTRS.forEach(function(attr, index){
+                    $(this.m_thead[index + 1]).find("button").button("option", "icons",
+                                                                     { primary: null, secondary: null });
+                }, this);
+            }else{
+                $(this.m_thead[0]).find("button").button("option", "icons", { primary: null, secondary: null });
+                FileListView.ROW_ATTRS.forEach(function(attr, index){
+                    if (this.m_sort.attr == attr){
+                        $(this.m_thead[index + 1]).find("button").button("option", "icons",
+                                                                         { primary: null, secondary: icon });
+                    }else{
+                        $(this.m_thead[index + 1]).find("button").button("option", "icons",
+                                                                         { primary: null, secondary: null });
+                    }
+                }, this);
             }
         }
     };
@@ -350,8 +462,10 @@ $(function(){
     FileListView.TEXT_REVISION = "Revision";
     FileListView.TEXT_DATE = "Date";
     FileListView.TEXT_SIZE = "Size";
+    FileListView.TEXT_LOADING = "Loading...";
     FileListView.CLASS_ROOT_TABLE = "file_list_view";
     FileListView.CLASS_LOADING = "loading";
+    FileListView.CLASS_DIR_LINK = "dir_link";
 
 
     var LogView = function(elem, model){

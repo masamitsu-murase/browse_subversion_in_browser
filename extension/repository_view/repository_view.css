@@ -71,6 +71,7 @@ dd.svn_children_root > ul > li > dl{
     margin: 0px;
 }
 
+/*********************************************/
 /* file list */
 #file_list{
     overflow: auto;
@@ -79,18 +80,27 @@ dd.svn_children_root > ul > li > dl{
 table.file_list_view{
     border-collapse: collapse;
 }
-table.file_list_view th, table.file_list_view td{
-    /* border: 1px solid black; */
+table.file_list_view td{
+    padding: 0.1em 0.5em;
 }
-table.file_list_view tbody tr:nth-child(odd){
-    background-color: #DDD;
+table.file_list_view tbody td.revision, table.file_list_view tbody td.size{
+    text-align: right;
 }
 table.file_list_view tbody td.loading{
+    text-align: center;
+}
+table.file_list_view tbody td.loading span{
     padding-left: 2em;
     background-image: url("./images/ajax_loader.gif") !important;
     background-size: 1em;
     background-position: left center;
     background-repeat: no-repeat;
+}
+table.file_list_view tbody td.name > .dir_link{
+    cursor: pointer;
+}
+table.file_list_view tbody td.name > .dir_link:hover{
+    text-decoration: underline;
 }
 
 /* LogView */
