@@ -7,9 +7,20 @@
     background-image: url(images/ajax_loader.gif) !important;
     background-size: 100%;
 }
+.ui-resize-helper{
+    border: 2px dotted #00F;
+}
 
 /*********************************************/
 /* Main frame and splitter */
+#content_widget{
+    overflow: hidden;
+}
+#content_header, #log_header{
+    margin: 0px;
+    padding-left: 1em;
+    padding-right: 1em;
+}
 #content_frame{
     width: 100%;
     height: 500px;
@@ -110,10 +121,12 @@ table.file_list_view tbody td.name > .dir_link:hover{
 
 /*********************************************/
 /* LogView */
-#log{
+#log_view{
     overflow: auto;
 }
 dl.log_view{
+    margin: 0px;
+    padding: 0px;
 }
 dl.log_view > dt{
     font-size: larger;

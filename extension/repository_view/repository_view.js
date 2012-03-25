@@ -526,11 +526,6 @@ $(function(){
         },
 
         updateLogList: function(url, logs){
-            // remove current logs
-            while(this.m_view_elem.firstChild){
-                this.m_view_elem.removeChild(this.m_view_elem.firstChild);
-            }
-
             // add
             var elem = document.createElement("dl");
             this.m_view_elem.appendChild(elem);
@@ -546,6 +541,14 @@ $(function(){
             dd.appendChild(logs_root);
             logs.forEach(function(log){
                 this.createLog(logs_root, log);
+            }, this);
+
+            // then remove current logs to keep scroll position.
+            var removed_children = Array.prototype.filter.call(this.m_view_elem.childNodes, function(item){
+                return item != elem;
+            });
+            removed_children.forEach(function(item){
+                this.m_view_elem.removeChild(item);
             }, this);
         },
 
@@ -617,43 +620,6 @@ $(function(){
     LogView.COMMENT_LENGTH = 40;
 
 
-    var BasicInfoView = function(elem, model){
-        this.m_model = model;
-
-        while(elem.firstChild){
-            elem.removeChild(elem.firstChild);
-        }
-
-        var dl = document.createElement("dl");
-        elem.appendChild(dl);
-        var dt = document.createElement("dt");
-        dl.appendChild(dt);
-        dt.appendChild(document.createTextNode("Path"));
-        var dd = document.createElement("dd");
-        dl.appendChild(dd);
-        this.m_path_elem = dd;
-
-        dt = document.createElement("dt");
-        dl.appendChild(dt);
-        dt.appendChild(document.createTextNode("Revision"));
-        dd = document.createElement("dd");
-        dl.appendChild(dd);
-        this.m_revision_elem = dd;
-    };
-    BasicInfoView.prototype = {
-        update: function(){
-            if (this.m_path_elem.firstChild){
-                this.m_path_elem.removeChild(this.m_path_elem.firstChild);
-            }
-            this.m_path_elem.appendChild(document.createTextNode(this.m_model.repositoryInfo().root_url + this.m_model.path()));
-
-            if (this.m_revision_elem.firstChild){
-                this.m_revision_elem.removeChild(this.m_revision_elem.firstChild);
-            }
-            this.m_revision_elem.appendChild(document.createTextNode(this.m_model.operationRevision()));
-        }
-    };
-
     var load = function(){
         // splitter
         $("#content_frame").splitter({
@@ -666,7 +632,7 @@ $(function(){
         elem = document.getElementById("dir_tree");
 
         // log view
-        var log_view = new LogView(document.getElementById("log"), "", model.pegRevision());
+        var log_view = new LogView(document.getElementById("log_view"), "", model.pegRevision());
 
         // file list
         var file_list_view = new FileListView(document.getElementById("file_list"), model, log_view);
@@ -676,9 +642,21 @@ $(function(){
         var dv = new DirectoryView(elem, model, log_view);
         model.addListener(dv);
 
-        // basic info
-        var basic_info_view = new BasicInfoView(document.getElementById("basic_info"), model);
-        model.addListener(basic_info_view);
+        // resizable content_widget
+        $("#content_widget").resizable({
+            handles: "s",
+            helper: "ui-resize-helper",
+            stop: function(event, ui){
+                var height = $("#content_widget").innerHeight() - $("#content_header").outerHeight();
+                if (height < 0){
+                    height = 10;
+                }
+                $("#dir_tree").css("height", height + "px");
+                $("#file_list").css("height", height + "px");
+                $("#content_frame").css("height", height + "px").trigger("resize");
+            }
+        });
+
 
         document.getElementById("change_revision").addEventListener("click", function(){
             var rev = document.getElementById("revision").value;
