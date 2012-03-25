@@ -313,7 +313,7 @@ $(function(){
                 case "revision":
                 case "size":
                     var attr = this.m_sort.attr;
-                    sort_by = function(item){ return item.info(attr); };
+                    sort_by = function(item){ return item.info(attr) || ""; };
                     break;
                 case "date":
                     sort_by = function(item){ return item.info("date").getTime(); };
@@ -421,7 +421,7 @@ $(function(){
             td = document.createElement("td");
             tr.appendChild(td);
             $(td).addClass("author");
-            td.appendChild(document.createTextNode(rsc.info("author")));
+            td.appendChild(document.createTextNode(rsc.info("author") || ""));
 
             // revision
             td = document.createElement("td");
@@ -570,18 +570,19 @@ $(function(){
             elem = document.createElement("span");
             dt.appendChild(elem);
             $(elem).addClass(LogView.CLASS_AUTHOR);
-            elem.appendChild(document.createTextNode(log.author));
+            elem.appendChild(document.createTextNode(log.author || ""));
 
             // first line of log
             elem = document.createElement("span");
             dt.appendChild(elem);
             $(elem).addClass(LogView.CLASS_COMMENT);
-            var length = log.comment.indexOf("\n");
+            var comment = (log.comment || "");
+            var length = comment.indexOf("\n");
             if (length < 0 || length > LogView.COMMENT_LENGTH){
                 length = LogView.COMMENT_LENGTH;
             }
-            var text = log.comment.substr(0, length);
-            if (text.length < log.comment.length){
+            var text = comment.substr(0, length);
+            if (text.length < comment.length){
                 text += "...";
             }
             elem.appendChild(document.createTextNode(text));
@@ -591,7 +592,7 @@ $(function(){
             logs_root.appendChild(dd);
             var div = document.createElement("div");
             dd.appendChild(div);
-            div.appendChild(document.createTextNode(log.comment));
+            div.appendChild(document.createTextNode(comment));
             $(div).hide();  // log comment is hidden in default.
 
             // toggle log comment
