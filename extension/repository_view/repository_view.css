@@ -25,6 +25,7 @@
     background-color: #000;
 }
 
+/*********************************************/
 /* DirectoryView */
 #dir_tree{
     overflow: auto;
@@ -82,6 +83,9 @@ table.file_list_view{
 }
 table.file_list_view td{
     padding: 0.1em 0.5em;
+}
+table.file_list_view tbody tr{
+    cursor: default;
 }
 table.file_list_view tbody td.revision, table.file_list_view tbody td.size{
     text-align: right;

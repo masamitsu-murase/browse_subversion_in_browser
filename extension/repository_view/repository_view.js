@@ -61,11 +61,13 @@ $(function(){
         DATE_DATE_TIME: 3
     };
 
-    var DirectoryView = function(view_elem, model){
+    var DirectoryView = function(view_elem, model, log_view){
         this.m_view_elem = view_elem;
+        this.m_model = model;
+        this.m_log_view = log_view;
+
         this.m_root_div = this.createRootDiv();
         this.m_view_elem.appendChild(this.m_root_div);
-        this.m_model = model;
     };
     DirectoryView.prototype = {
         update: function(){
@@ -165,9 +167,11 @@ $(function(){
                 var path = dir.path();
                 if (dir.isLoaded()){
                     self.m_model.changePath(path);
+                    if (self.m_log_view){ self.m_log_view.changeUrl(self.m_model.repositoryInfo().root_url + path) }
                 }else{
                     self.m_model.changePath(path);
                     self.m_model.reloadPath(path);
+                    if (self.m_log_view){ self.m_log_view.changeUrl(self.m_model.repositoryInfo().root_url + path) }
                 }
             });
             $(path_elem).dblclick(function(){
@@ -214,7 +218,7 @@ $(function(){
     DirectoryView.CLASS_CHILDREN_ROOT = "svn_children_root";
 
 
-    var FileListView = function(elem, model){
+    var FileListView = function(elem, model, log_view){
         // construct file list table.
         var table = document.createElement("table");
         elem.appendChild(table);
@@ -261,15 +265,22 @@ $(function(){
         table.appendChild(tbody);
 
         this.m_model = model;
+        this.m_log_view = log_view;
         this.m_thead = head;
         this.m_tbody = tbody;
         this.m_sort = { attr: "name", reverse: false };
+        this.m_current_path = null;
+        this.m_selected_path = null;
 
         this.updateSortingHint();
     };
     FileListView.prototype = {
         update: function(){
             var current_path = this.m_model.path();
+            if (this.current_path != current_path){
+                this.current_path = current_path;
+                this.m_selected_path = null;
+            }
 
             this.updateSortingHint();
 
@@ -354,6 +365,9 @@ $(function(){
         },
 
         createRow: function(rsc, text /* =null */){
+            var self = this;
+            var path = rsc.path();
+
             var tr = document.createElement("tr");
             this.m_tbody.appendChild(tr);
             $(tr).addClass("ui-state-default");
@@ -362,6 +376,14 @@ $(function(){
             }, function(){
                 $(this).removeClass("ui-state-hover").addClass("ui-state-default");
             });
+            $(tr).click(function(){
+                if (self.m_log_view){ self.m_log_view.changeUrl(self.m_model.repositoryInfo().root_url + path) }
+                self.m_selected_path = path;
+                self.update();
+            });
+            if (this.m_selected_path == path){
+                $(tr).addClass("ui-state-highlight");
+            }
 
             // name
             var td = document.createElement("td");
@@ -383,13 +405,12 @@ $(function(){
             $(text_elem).addClass(FileListView.CLASS_DIR_LINK);
             text_elem.appendChild(document.createTextNode(text || rsc.name()));
             if (rsc.isDirectory()){
-                var self = this;
                 $(text_elem).click(function(){
                     if (rsc.isLoaded()){
-                        self.m_model.changePath(rsc.path());
+                        self.m_model.changePath(path);
                     }else{
-                        self.m_model.changePath(rsc.path());
-                        self.m_model.reloadPath(rsc.path());
+                        self.m_model.changePath(path);
+                        self.m_model.reloadPath(path);
                     }
                 });
             }else if (rsc.isFile()){
@@ -472,29 +493,35 @@ $(function(){
     FileListView.CLASS_DIR_LINK = "dir_link";
 
 
-    var LogView = function(elem, model){
+    var LogView = function(elem, url, revision){
         this.m_view_elem = elem;
-        this.m_model = model;
-        this.m_path = null;
+        this.m_url = url;
+        this.m_revision = revision;
+        this.updateLog();
     };
     LogView.prototype = {
-        update: function(){
-            var path = this.m_model.path();
-            if (this.m_path !== path){
-                this.m_path = path;
-                this.updateLog(path);
+        changeUrl: function(url){
+            if (this.m_url != url){
+                this.m_url = url;
+                this.updateLog();
             }
         },
 
-        updateLog: function(path){
-            var url = this.m_model.repositoryInfo().root_url + path;
+        changeRevision: function(revision){
+            if (this.m_revision != revision){
+                this.m_revision = revision;
+                this.updateLog();
+            }
+        },
+
+        updateLog: function(){
             var self = this;
-            gDavSvn.log(url, this.m_model.pegRevision(), 0, 100, function(obj){
+            gDavSvn.log(this.m_url, this.m_revision, 0, 100, function(obj){
                 if (!obj.ret){
                     return;
                 }
 
-                self.updateLogList(url, obj.logs);
+                self.updateLogList(self.m_url, obj.logs);
             });
         },
 
@@ -518,61 +545,65 @@ $(function(){
             var logs_root = document.createElement("dl");
             dd.appendChild(logs_root);
             logs.forEach(function(log){
-                var dt = document.createElement("dt");
-                logs_root.appendChild(dt);
+                this.createLog(logs_root, log);
+            }, this);
+        },
 
-                // revision
-                var elem = document.createElement("span");
-                dt.appendChild(elem);
-                $(elem).addClass(LogView.CLASS_REVISION);
-                elem.appendChild(document.createTextNode(log.revision));
+        createLog: function(logs_root, log){
+            var dt = document.createElement("dt");
+            logs_root.appendChild(dt);
 
-                // date
-                elem = document.createElement("time");
-                dt.appendChild(elem);
-                $(elem).addClass(LogView.CLASS_DATE);
-                elem.appendChild(document.createTextNode(i18n.date(log.date)));
-                elem.setAttribute("datetime", log.date.toLocaleString());
+            // revision
+            var elem = document.createElement("span");
+            dt.appendChild(elem);
+            $(elem).addClass(LogView.CLASS_REVISION);
+            elem.appendChild(document.createTextNode(log.revision));
 
-                // author
-                elem = document.createElement("span");
-                dt.appendChild(elem);
-                $(elem).addClass(LogView.CLASS_AUTHOR);
-                elem.appendChild(document.createTextNode(log.author));
+            // date
+            elem = document.createElement("time");
+            dt.appendChild(elem);
+            $(elem).addClass(LogView.CLASS_DATE);
+            elem.appendChild(document.createTextNode(i18n.date(log.date)));
+            elem.setAttribute("datetime", log.date.toLocaleString());
 
-                // first line of log
-                elem = document.createElement("span");
-                dt.appendChild(elem);
-                $(elem).addClass(LogView.CLASS_COMMENT);
-                var length = log.comment.indexOf("\n");
-                if (length < 0 || length > LogView.COMMENT_LENGTH){
-                    length = LogView.COMMENT_LENGTH;
+            // author
+            elem = document.createElement("span");
+            dt.appendChild(elem);
+            $(elem).addClass(LogView.CLASS_AUTHOR);
+            elem.appendChild(document.createTextNode(log.author));
+
+            // first line of log
+            elem = document.createElement("span");
+            dt.appendChild(elem);
+            $(elem).addClass(LogView.CLASS_COMMENT);
+            var length = log.comment.indexOf("\n");
+            if (length < 0 || length > LogView.COMMENT_LENGTH){
+                length = LogView.COMMENT_LENGTH;
+            }
+            var text = log.comment.substr(0, length);
+            if (text.length < log.comment.length){
+                text += "...";
+            }
+            elem.appendChild(document.createTextNode(text));
+
+            // log
+            var dd = document.createElement("dd");
+            logs_root.appendChild(dd);
+            var div = document.createElement("div");
+            dd.appendChild(div);
+            div.appendChild(document.createTextNode(log.comment));
+            $(div).hide();  // log comment is hidden in default.
+
+            // toggle log comment
+            $(dt).addClass(LogView.CLASS_COLLAPSED);
+            $(dt).click(function(){
+                if ($(this).hasClass(LogView.CLASS_COLLAPSED)){
+                    $(this).removeClass(LogView.CLASS_COLLAPSED);
+                    $(this).next().children().show("blind");
+                }else{
+                    $(this).addClass(LogView.CLASS_COLLAPSED);
+                    $(this).next().children().hide("blind");
                 }
-                var text = log.comment.substr(0, length);
-                if (text.length < log.comment.length){
-                    text += "...";
-                }
-                elem.appendChild(document.createTextNode(text));
-
-                // log
-                var dd = document.createElement("dd");
-                logs_root.appendChild(dd);
-                var div = document.createElement("div");
-                dd.appendChild(div);
-                div.appendChild(document.createTextNode(log.comment));
-                $(div).hide();  // log comment is hidden in default.
-
-                // toggle log comment
-                $(dt).addClass(LogView.CLASS_COLLAPSED);
-                $(dt).click(function(){
-                    if ($(this).hasClass(LogView.CLASS_COLLAPSED)){
-                        $(this).removeClass(LogView.CLASS_COLLAPSED);
-                        $(this).next().children().show("blind");
-                    }else{
-                        $(this).addClass(LogView.CLASS_COLLAPSED);
-                        $(this).next().children().hide("blind");
-                    }
-                });
             });
         }
     };
@@ -629,18 +660,20 @@ $(function(){
             sizeLeft: true
         });
 
-        // view, model
+        // model
         var model = new DavSvnModel("http://svn.apache.org/repos/asf/subversion", 1000000);
         elem = document.getElementById("dir_tree");
-        var dv = new DirectoryView(elem, model);
-        model.addListener(dv);
 
-        var log_view = new LogView(document.getElementById("log"), model);
-        model.addListener(log_view);
+        // log view
+        var log_view = new LogView(document.getElementById("log"), "", model.pegRevision());
 
         // file list
-        var file_list_view = new FileListView(document.getElementById("file_list"), model);
+        var file_list_view = new FileListView(document.getElementById("file_list"), model, log_view);
         model.addListener(file_list_view);
+
+        // directory view
+        var dv = new DirectoryView(elem, model, log_view);
+        model.addListener(dv);
 
         // basic info
         var basic_info_view = new BasicInfoView(document.getElementById("basic_info"), model);
